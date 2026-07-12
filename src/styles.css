@@ -298,6 +298,59 @@
   color: var(--muted);
   margin: 5px 0;
 }
+.study-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -15px 0 25px;
+}
+.study-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 7px;
+  padding: 8px 11px;
+  font-size: 9px;
+}
+.study-tools button.active {
+  border-color: #6d50a1;
+  color: #c4b5fd;
+  background: #8b5cf610;
+}
+.study-tools > span {
+  margin-left: auto;
+  color: #6f7380;
+  font: 8px DM Mono;
+}
+.lesson-notes {
+  border: 1px solid #4b3874;
+  background: #8b5cf608;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 25px;
+}
+.lesson-notes > div {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.lesson-notes b { font-size: 10px; color: #c4b5fd; }
+.lesson-notes span { color: #737785; font: 8px DM Mono; }
+.lesson-notes textarea {
+  width: 100%;
+  resize: vertical;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  background: #0b0c10;
+  color: #d4d6dd;
+  border-radius: 8px;
+  padding: 12px;
+  font: 11px/1.7 DM Sans;
+}
 .course-lesson > section {
   padding-top: 62px;
 }
@@ -357,6 +410,39 @@
   margin: 12px 0 0;
 }
 .success-criteria svg { color: #34d399; }
+.takeaway-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+}
+.takeaway-grid > div,
+.lesson-glossary > div {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 9px;
+  padding: 14px;
+}
+.takeaway-grid b {
+  color: #c4b5fd;
+  font: 8px DM Mono;
+}
+.takeaway-grid p,
+.lesson-glossary dd {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.65;
+  margin: 8px 0 0;
+}
+.takeaway-grid code { color: #67d7b1; }
+.glossary-title { margin: 28px 0 10px; font-size: 15px; }
+.lesson-glossary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 9px;
+  margin: 0;
+}
+.lesson-glossary dt { color: #d4d6dd; font-size: 10px; font-weight: 700; }
+.lesson-glossary dd { margin-left: 0; }
 .why-box {
   border-left: 2px solid #8b5cf6;
   background: #8b5cf60b;
@@ -633,6 +719,14 @@
   }
   .annotation-grid {
     grid-template-columns: 1fr;
+  }
+  .takeaway-grid,
+  .lesson-glossary {
+    grid-template-columns: 1fr;
+  }
+  .study-tools > span {
+    width: 100%;
+    margin-left: 0;
   }
   .lesson-outline button em {
     display: none;

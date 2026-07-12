@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   Award,
+  Bookmark,
   BookOpen,
   Check,
   ChevronRight,
@@ -12,6 +13,7 @@ import {
   GitBranch,
   Layers3,
   Moon,
+  NotebookPen,
   Pause,
   Play,
   RotateCcw,
@@ -1567,6 +1569,16 @@ function CourseLessonReader({
   const [completedLessons, setCompletedLessons] = useState<number[]>(() =>
     completedFor(track.slug),
   );
+  const studyKey = `${track.slug}:${lesson.id}`;
+  const [bookmarked, setBookmarked] = useState(() => {
+    const saved = JSON.parse(localStorage.getItem("opsquest-bookmarks-v1") || "[]") as string[];
+    return saved.includes(studyKey);
+  });
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [note, setNote] = useState(() => {
+    const notes = JSON.parse(localStorage.getItem("opsquest-notes-v1") || "{}") as Record<string, string>;
+    return notes[studyKey] || "";
+  });
   const done = completedLessons.includes(lesson.id);
   useEffect(() => {
     setStep(0);
@@ -1577,7 +1589,28 @@ function CourseLessonReader({
     setValidated(false);
     setQuiz(null);
     setCompletedLessons(completedFor(track.slug));
+    const bookmarks = JSON.parse(localStorage.getItem("opsquest-bookmarks-v1") || "[]") as string[];
+    const notes = JSON.parse(localStorage.getItem("opsquest-notes-v1") || "{}") as Record<string, string>;
+    const key = `${track.slug}:${lesson.id}`;
+    setBookmarked(bookmarks.includes(key));
+    setNote(notes[key] || "");
+    setNotesOpen(false);
   }, [lesson.id, track.slug]);
+  const toggleBookmark = () => {
+    const bookmarks = JSON.parse(localStorage.getItem("opsquest-bookmarks-v1") || "[]") as string[];
+    const next = bookmarked
+      ? bookmarks.filter((item) => item !== studyKey)
+      : Array.from(new Set([...bookmarks, studyKey]));
+    localStorage.setItem("opsquest-bookmarks-v1", JSON.stringify(next));
+    setBookmarked(!bookmarked);
+  };
+  const saveNote = (value: string) => {
+    setNote(value);
+    const notes = JSON.parse(localStorage.getItem("opsquest-notes-v1") || "{}") as Record<string, string>;
+    if (value.trim()) notes[studyKey] = value;
+    else delete notes[studyKey];
+    localStorage.setItem("opsquest-notes-v1", JSON.stringify(notes));
+  };
   const execute = () => {
     const value = input.trim();
     if (!value) return;
@@ -1677,6 +1710,31 @@ function CourseLessonReader({
             <p>{lesson.objective}</p>
           </div>
         </div>
+        <div className="study-tools">
+          <button className={bookmarked ? "active" : ""} onClick={toggleBookmark}>
+            <Bookmark size={15} fill={bookmarked ? "currentColor" : "none"} />
+            {bookmarked ? "Bookmarked" : "Bookmark lesson"}
+          </button>
+          <button className={notesOpen ? "active" : ""} onClick={() => setNotesOpen((value) => !value)}>
+            <NotebookPen size={15} />
+            {note ? "Edit my notes" : "Add my notes"}
+          </button>
+          <span>{note.length} characters saved locally</span>
+        </div>
+        {notesOpen && (
+          <div className="lesson-notes">
+            <div>
+              <b>My notes</b>
+              <span>Saved automatically on this device</span>
+            </div>
+            <textarea
+              value={note}
+              onChange={(event) => saveNote(event.target.value)}
+              placeholder={`Write your ${track.name} observations, commands, or interview reminders…`}
+              rows={5}
+            />
+          </div>
+        )}
         <section>
           <span className="kicker">PRODUCTION CONTEXT</span>
           <h2>Start from the incident, not the definition</h2>
@@ -1854,6 +1912,41 @@ function CourseLessonReader({
             <b>The interviewer’s trap</b>
             <p>{lesson.interviewTrap}</p>
           </div>
+        </section>
+        <section>
+          <span className="kicker">LESSON REVIEW</span>
+          <h2>Keep the operational model</h2>
+          <div className="takeaway-grid">
+            <div>
+              <b>01 · Observe</b>
+              <p>Use <code>{track.command}</code> to preserve scoped evidence before changing state.</p>
+            </div>
+            <div>
+              <b>02 · Decide</b>
+              <p>Connect the first failing contract to the smallest reversible repair, not the loudest symptom.</p>
+            </div>
+            <div>
+              <b>03 · Prove</b>
+              <p>Run <code>{track.validator}</code> and pair the result with the original user-visible outcome.</p>
+            </div>
+          </div>
+          <h3 className="glossary-title">Concept glossary</h3>
+          <dl className="lesson-glossary">
+            {track.concept.map((concept, index) => (
+              <div key={concept}>
+                <dt>{concept}</dt>
+                <dd>
+                  {index === 0
+                    ? `The input boundary where work first enters the ${track.name} system.`
+                    : index === 1
+                      ? "The control point that evaluates configuration and chooses the next state."
+                      : index === 2
+                        ? "The stateful stage where an evidenced repair changes runtime behavior."
+                        : "The observable outcome used to prove platform and user-facing recovery."}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </section>
         <div className="lesson-complete">
           <div>
