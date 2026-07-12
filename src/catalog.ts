@@ -27,6 +27,19 @@ export type LessonSpec = {
   kind: "lesson" | "playground" | "quiz" | "challenge";
   objective: string;
   summary: string;
+  hook: string;
+  deepDive: string[];
+  walkthrough: {
+    label: string;
+    command: string;
+    output: string;
+    why: string;
+  }[];
+  challenge: string;
+  successCriteria: string[];
+  interviewQuestion: string;
+  interviewTrap: string;
+  diagramNarration: [string, string, string, string];
 };
 const row = (
   name: string,
@@ -809,7 +822,12 @@ export const tierMeta: Record<
   },
 };
 
-const lessonBlueprints: Array<Omit<LessonSpec, "tier">> = [
+type LessonBlueprint = Pick<
+  LessonSpec,
+  "id" | "slug" | "title" | "minutes" | "kind" | "objective" | "summary"
+>;
+
+const lessonBlueprints: LessonBlueprint[] = [
   {
     id: 1,
     slug: "production-orientation",
@@ -935,9 +953,155 @@ const lessonBlueprints: Array<Omit<LessonSpec, "tier">> = [
   },
 ];
 
+const lessonDepth = (track: Track, lesson: (typeof lessonBlueprints)[number]) => {
+  const phases = [
+    {
+      hook: `You have just joined the on-call rotation. ${track.scenario} Before touching the system, your lead asks you to explain exactly where ${track.name} sits in the request path and which signal you would trust first.`,
+      deepDive: [
+        `${track.name} is not an isolated tool: it owns a boundary between ${track.concept[0]} and ${track.concept[1]}. Inputs cross that boundary, a control decision is made, and the resulting state becomes visible through ${track.concept[3]}.`,
+        `A production-safe first response separates identity, scope, current state, and desired state. That prevents a correct command from being run against the wrong object or environment.`,
+      ],
+      challenge: `Draw the four-stage ${track.name} path, name the owner of each stage, and identify the first observable signal when the incident begins.`,
+      question: `Where does ${track.name} sit in a production architecture, and what does it own?`,
+      trap: "Listing features without defining the operational boundary or source of truth.",
+    },
+    {
+      hook: `${track.scenario} A dashboard shows the final symptom, but the failing decision happened earlier. Trace the request through every ${track.name} control point before choosing a repair.`,
+      deepDive: [
+        `The control flow is ${track.concept.join(" → ")}. Each transition has a contract: accepted input, a decision, a state mutation, and an observable result.`,
+        `When the final stage is unhealthy, work backward until observed state first diverges from that contract. That first divergence is usually more useful than the loudest downstream error.`,
+      ],
+      challenge: `Step through the diagram and state what evidence would prove or disprove each transition in the ${track.name} path.`,
+      question: `Walk me through ${track.name}'s control flow during this failure.`,
+      trap: "Jumping from the user-visible symptom directly to a guessed root cause.",
+    },
+    {
+      hook: `A new engineer needs to operate ${track.name} safely without copying a runbook blindly. Run the baseline operation, read its output field by field, and explain why its scope is safe.`,
+      deepDive: [
+        `The diagnostic command is read-only in intent: it captures the state that existed before remediation. Preserve that output because it becomes the comparison point for recovery.`,
+        `Treat every flag as part of the safety model. Scope and output selection determine whether the command answers this incident or creates distracting, ambiguous evidence.`,
+      ],
+      challenge: `Run the diagnostic exactly, identify the line that proves the failure, and record it before applying any change.`,
+      question: `Which ${track.name} command gives you the highest-information first observation here?`,
+      trap: "Reciting a command without interpreting the returned state.",
+    },
+    {
+      hook: `The incident channel is filling with theories. ${track.scenario} Establish a trustworthy baseline so the team can distinguish facts from guesses.`,
+      deepDive: [
+        `A baseline combines current status, a timestamp, scope, configuration, and the user-visible symptom. One snapshot is not a trend, but it is the minimum evidence needed to evaluate a later change.`,
+        `Capture evidence before restarts or edits. Many failure signals are transient and disappear as soon as state is recreated.`,
+      ],
+      challenge: `Capture the diagnostic output, annotate the failing field, and state what additional observation would falsify your current hypothesis.`,
+      question: `How do you establish a ${track.name} baseline during an active incident?`,
+      trap: "Changing state first and trying to reconstruct the original failure afterward.",
+    },
+    {
+      hook: `${track.scenario} The visible error is a platform state, not necessarily the cause. Classify the evidence and choose the next action with the smallest cost and blast radius.`,
+      deepDive: [
+        `Symptoms describe impact; states describe what the platform is doing; causes explain why it entered that state. The line ${JSON.stringify(track.output.split("\n").slice(-1)[0])} is useful because it narrows the failing contract.`,
+        `A good next command changes the decision tree. If both possible outputs lead to the same action, the command adds noise rather than information.`,
+      ],
+      challenge: `Label the supplied output as symptom, state, or cause, then defend the next diagnostic you would run.`,
+      question: `How do you distinguish a ${track.name} symptom from its root cause?`,
+      trap: "Treating the first recognizable error label as the diagnosis.",
+    },
+    {
+      hook: `You now have evidence for the failure. Apply the narrowest reversible ${track.name} repair, avoid unrelated cleanup, and keep a rollback path open.`,
+      deepDive: [
+        `The repair must address the observed mismatch and nothing broader. Small changes reduce both blast radius and the number of variables in the recovery test.`,
+        `A command reporting success proves only that the control plane accepted the request. It does not prove convergence or restoration of the original user journey.`,
+      ],
+      challenge: `Apply the repair, explain which state it changes, and name the exact rollback action before you execute it.`,
+      question: `Why is this the safest repair for the ${track.name} incident?`,
+      trap: "Making several plausible fixes at once and losing causal confidence.",
+    },
+    {
+      hook: `The repair command succeeded, but the incident is not closed. Prove ${track.name} converged and that the original user-facing operation works again.`,
+      deepDive: [
+        `Validation needs two layers: control-plane state and data-plane or user-visible behavior. Either layer alone can produce a false recovery.`,
+        `Use the original baseline as the before-state. A useful recovery claim names what changed, what stayed stable, and how long the healthy signal was observed.`,
+      ],
+      challenge: `Run the validator only after repair, then describe a user-level smoke check and one regression signal to watch.`,
+      question: `What evidence is sufficient to declare this ${track.name} incident recovered?`,
+      trap: "Stopping when the mutation command exits zero.",
+    },
+    {
+      hook: `Traffic doubles after recovery and the same path approaches saturation. Decide whether to scale ${track.name}, remove a bottleneck, or protect the dependency first.`,
+      deepDive: [
+        `Scaling is safe only when the constrained resource and workload semantics are known. More replicas cannot repair serialized work, shared locks, hot partitions, or an exhausted dependency.`,
+        `Choose a leading saturation signal, a user-facing SLO, and a rollback threshold. Capacity without guardrails can turn a local bottleneck into a fleet-wide failure.`,
+      ],
+      challenge: `Name the constrained resource, propose one scaling action, and define the metric that would prove it helped rather than moved the bottleneck.`,
+      question: `How would you scale this ${track.name} path without hiding the real bottleneck?`,
+      trap: "Assuming horizontal scale is universally safe and linear.",
+    },
+    {
+      hook: `Security review finds that the working recovery path has more privilege than it needs. Harden ${track.name} while preserving the runtime contract.`,
+      deepDive: [
+        `Least privilege applies to identities, resources, actions, network paths, and time. Remove one unnecessary capability at a time and retest the exact production workflow.`,
+        `Availability is part of security. A hardening change that silently blocks health checks, rotation, or recovery creates a different operational vulnerability.`,
+      ],
+      challenge: `Identify the highest-risk permission or trust boundary, narrow it, and prove the normal workflow plus rollback still works.`,
+      question: `How would you reduce the blast radius of this ${track.name} setup?`,
+      trap: "Calling a configuration secure because it is restrictive without testing operability.",
+    },
+    {
+      hook: `The same incident has happened twice. Turn the successful ${track.name} diagnosis and repair into an idempotent, reviewable runbook with guardrails.`,
+      deepDive: [
+        `Automation should encode preconditions, scoped diagnostics, the smallest mutation, validation, and an explicit failure path. A shell script that only repeats commands is not yet an operational control.`,
+        `Idempotence means rerunning the workflow leaves an already-correct system unchanged. Auditability means an operator can see inputs, decisions, and the exact state transition.`,
+      ],
+      challenge: `Write the runbook sequence as precheck → evidence → repair → validation → rollback and identify where human approval belongs.`,
+      question: `What makes a ${track.name} recovery runbook safe to automate?`,
+      trap: "Automating the mutation while omitting preconditions and post-change proof.",
+    },
+    {
+      hook: `Boss incident: ${track.scenario} You have ten minutes, mixed signals, and no hints. Restore service without destroying evidence or widening impact.`,
+      deepDive: [
+        `Start by stating impact and scope, then follow the highest-information branch. Keep a timestamped incident log so every mutation is tied to evidence and an expected result.`,
+        `The winning sequence is not the fastest typing; it is the shortest defensible path from symptom to cause to verified recovery. Escalate when authority or rollback safety is missing.`,
+      ],
+      challenge: `Complete diagnostic, repair, and validation in order. Then give a three-sentence incident update covering impact, cause, and recovery evidence.`,
+      question: `Lead me through this ${track.name} incident as if I were the incident commander.`,
+      trap: "Optimizing for speed while skipping scope, communication, or recovery proof.",
+    },
+    {
+      hook: `You are in the final interview round. Explain the ${track.name} incident in 60–90 seconds, then prove your answer with the same commands used in the lab.`,
+      deepDive: [
+        `A strong answer follows situation → evidence → decision → result → prevention. It distinguishes the visible state from root cause and names the trade-off behind the chosen repair.`,
+        `Interviewers probe depth with counterfactuals: what if the diagnostic were clean, the repair failed, or the validator passed while users still saw errors? Prepare those branches explicitly.`,
+      ],
+      challenge: `Deliver the model answer aloud, answer one failure-path follow-up, and complete the hands-on validator without hints.`,
+      question: `Explain how you diagnosed, repaired, and prevented this ${track.name} failure.`,
+      trap: "Giving a polished definition with no evidence, trade-off, or hands-on proof.",
+    },
+  ][lesson.id - 1];
+
+  return {
+    hook: phases.hook,
+    deepDive: phases.deepDive,
+    walkthrough: [
+      { label: "1 · Observe", command: track.command, output: track.output, why: "Preserves the failure evidence and narrows the responsible control point before state changes." },
+      { label: "2 · Repair", command: track.fix, output: `Change accepted: ${track.fix}`, why: "Applies the smallest track-specific mutation supported by the observed evidence." },
+      { label: "3 · Prove", command: track.validator, output: "PASS — desired state and recovery condition verified.", why: "Tests the explicit success condition instead of treating command acceptance as recovery." },
+    ],
+    challenge: phases.challenge,
+    successCriteria: ["Evidence captured before mutation", "Repair is narrow and reversible", "Validator proves the intended outcome"],
+    interviewQuestion: phases.question,
+    interviewTrap: phases.trap,
+    diagramNarration: [
+      `Input enters ${track.concept[0]}; confirm identity, scope, and timestamp.`,
+      `${track.concept[1]} evaluates desired state against the current observation.`,
+      `${track.concept[2]} is where the evidenced repair changes system state.`,
+      `${track.concept[3]} must prove platform health and the original user outcome.`,
+    ] as [string, string, string, string],
+  };
+};
+
 export const lessonsFor = (track: Track): LessonSpec[] =>
   lessonBlueprints.map((lesson) => ({
     ...lesson,
+    ...lessonDepth(track, lesson),
     tier:
       lesson.id <= 3
         ? "Beginner"

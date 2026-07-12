@@ -1621,17 +1621,10 @@ function CourseLessonReader({
         <section>
           <span className="kicker">PRODUCTION CONTEXT</span>
           <h2>Start from the incident, not the definition</h2>
-          <p>
-            {track.scenario} In this lesson, you are the engineer responsible
-            for collecting evidence, limiting blast radius, and proving that the
-            user-facing service actually recovered.
-          </p>
-          <p>
-            <b>{track.name}</b> sits on the path from <b>{track.concept[0]}</b>{" "}
-            to <b>{track.concept[3]}</b>. A useful mental model connects what
-            entered the system, which control decision was made, where state
-            changed, and which signal proves the outcome.
-          </p>
+          <p className="scenario-hook">{lesson.hook}</p>
+          {lesson.deepDive.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
           <div className="why-box">
             <b>Why this matters</b>
             <p>
@@ -1661,25 +1654,21 @@ function CourseLessonReader({
                 </React.Fragment>
               ))}
             </div>
-            <p>
-              {step === 0
-                ? "The workload enters through the system boundary. Capture identity, scope, and timestamp before changing anything."
-                : step === 1
-                  ? "The control plane evaluates configuration and current state. This is where a mismatch becomes observable."
-                  : step === 2
-                    ? "A narrow repair updates the responsible control point. Reversible changes protect the recovery path."
-                    : "The final signal must prove both platform health and the original user outcome."}
-            </p>
+            <p>{lesson.diagramNarration[step]}</p>
           </div>
         </section>
         <section>
-          <span className="kicker">EXACT COMMAND + ANNOTATED OUTPUT</span>
-          <h2>Collect evidence first</h2>
-          <Command
-            cmd={track.command}
-            output={track.output}
-            why={`It interrogates the ${track.name} control point directly and preserves a before-state for validation.`}
-          />
+          <span className="kicker">EXACT COMMAND WALKTHROUGH</span>
+          <h2>Observe, repair, and prove</h2>
+          <p>Each command is complete and copy-paste runnable. Read the output and the operational reason before moving to the next state.</p>
+          <div className="reader-command-stack">
+            {lesson.walkthrough.map((item) => (
+              <div key={item.label}>
+                <h3>{item.label}</h3>
+                <Command cmd={item.command} output={item.output} why={item.why} />
+              </div>
+            ))}
+          </div>
           <div className="annotation-grid">
             <div>
               <span>01</span>
@@ -1701,6 +1690,17 @@ function CourseLessonReader({
                 <b>Delta:</b> compare the output with the known-good contract.
               </p>
             </div>
+          </div>
+        </section>
+        <section>
+          <span className="kicker">YOUR TURN · VALIDATED CHALLENGE</span>
+          <h2>Complete the production task</h2>
+          <p className="scenario-hook">{lesson.challenge}</p>
+          <div className="success-criteria">
+            <b>Automated success contract</b>
+            {lesson.successCriteria.map((criterion) => (
+              <p key={criterion}><Check size={16} /> {criterion}</p>
+            ))}
           </div>
         </section>
         <section>
@@ -1786,14 +1786,11 @@ function CourseLessonReader({
         <section>
           <span className="kicker">INTERVIEW TRANSFER</span>
           <h2>Say it like a production engineer</h2>
+          <h3>{lesson.interviewQuestion}</h3>
           <blockquote>“{track.interview}”</blockquote>
           <div className="why-box">
             <b>The interviewer’s trap</b>
-            <p>
-              They are checking whether you confuse a visible platform state
-              with root cause, make changes before gathering evidence, or stop
-              after a command succeeds without validating the user outcome.
-            </p>
+            <p>{lesson.interviewTrap}</p>
           </div>
         </section>
         <div className="lesson-complete">
