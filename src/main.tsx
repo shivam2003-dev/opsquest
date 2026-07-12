@@ -558,7 +558,7 @@ function Home({ go }: { go: (p: Page) => void }) {
             </span>
             <b>+120 XP</b>
           </div>
-          <h3>The pod that won’t stay up</h3>
+          <h2>The pod that won’t stay up</h2>
           <p>
             Find why a production container keeps restarting—and ship the fix.
           </p>
@@ -2649,7 +2649,7 @@ function MockInterview({
         <div className="question-card-top">
           <span className={`difficulty-${question.difficulty.toLowerCase()}`}>{question.difficulty}</span>
           <span>{question.company}</span>
-          <span style={{ color: question.track.color }}>{question.track.icon} {question.track.name}</span>
+          <span className="technology" style={{ color: question.track.color }}>{question.track.icon} {question.track.name}</span>
         </div>
         <span className="kicker">QUESTION {index + 1} OF 5</span>
         <h2>{question.title}</h2>
@@ -2791,17 +2791,17 @@ function InterviewBank({
           <Search size={15} />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search technology, incident, or company…" />
         </label>
-        <select value={category} onChange={(event) => setCategory(event.target.value)}>
+        <select aria-label="Filter by category" value={category} onChange={(event) => setCategory(event.target.value)}>
           <option>All categories</option>
           {categories.map((item) => <option key={item}>{item}</option>)}
         </select>
-        <select value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
+        <select aria-label="Filter by difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
           <option>All difficulties</option>
           <option>Easy</option>
           <option>Medium</option>
           <option>Hard</option>
         </select>
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+        <select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
           <option>All status</option>
           <option>Unsolved</option>
           <option>Solved</option>
@@ -2820,7 +2820,7 @@ function InterviewBank({
               <div className="question-card-top">
                 <span className={`difficulty-${question.difficulty.toLowerCase()}`}>{question.difficulty}</span>
                 <span>{question.company}</span>
-                <span style={{ color: question.track.color }}>{question.track.icon} {question.track.name}</span>
+                <span className="technology" style={{ color: question.track.color }}>{question.track.icon} {question.track.name}</span>
                 {questionStatus[question.id] && (
                   <span className={`question-status ${questionStatus[question.id]}`}>
                     {questionStatus[question.id] === "solved" ? "✓ Solved" : "↻ Needs retry"}
@@ -2969,23 +2969,24 @@ function DesignSystem() {
       <span className="kicker">DELIVERABLE 02</span>
       <h1>Design system</h1>
       <p className="lede">
-        A calm operations console: dense enough for engineers, generous enough
-        for learning, with color reserved for state and consequence.
+        A modern light-first operations console: dense enough for engineers,
+        generous enough for learning, with accessible color reserved for state
+        and consequence.
       </p>
       <div className="design-grid">
         <section>
-          <h3>Color tokens</h3>
+          <h2>Color tokens</h2>
           <div className="swatches">
             {[
-              ["Void", "#08090D"],
-              ["Surface", "#111218"],
-              ["Primary", "#8B5CF6"],
-              ["Signal", "#22D3EE"],
-              ["Success", "#34D399"],
-              ["Warning", "#FBBF24"],
-              ["Danger", "#FB7185"],
+              ["Canvas", "#F8FAFC"],
+              ["Surface", "#FFFFFF"],
+              ["Primary", "#6D28D9"],
+              ["Signal", "#0369A1"],
+              ["Success", "#166534"],
+              ["Warning", "#92400E"],
+              ["Danger", "#BE123C"],
             ].map((x) => (
-              <div>
+              <div key={x[0]}>
                 <i style={{ background: x[1] }} />
                 <b>{x[0]}</b>
                 <code>{x[1]}</code>
@@ -2994,7 +2995,7 @@ function DesignSystem() {
           </div>
         </section>
         <section>
-          <h3>Difficulty & state</h3>
+          <h2>Difficulty & state</h2>
           <div className="badge-row">
             <span className="badge easy">EASY</span>
             <span className="badge medium">MEDIUM</span>
@@ -3013,10 +3014,10 @@ function DesignSystem() {
           </div>
         </section>
         <section>
-          <h3>Typography</h3>
+          <h2>Typography</h2>
           <div className="type-demo">
-            <h1>Debug production.</h1>
-            <h2>See the system.</h2>
+            <p className="type-h1">Debug production.</p>
+            <p className="type-h2">See the system.</p>
             <p>
               Readable explanations stay neutral. Commands use a crisp monospace
               face and preserve exact output.
@@ -3025,7 +3026,7 @@ function DesignSystem() {
           </div>
         </section>
         <section>
-          <h3>Motion principles</h3>
+          <h2>Motion principles</h2>
           <ul>
             <li>
               <b>Explain</b> — motion reveals system cause and effect.
