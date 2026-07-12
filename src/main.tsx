@@ -11,7 +11,6 @@ import {
   Flame,
   GitBranch,
   Layers3,
-  Lock,
   Moon,
   Pause,
   Play,
@@ -24,10 +23,18 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import {
+  categories,
+  tierMeta,
+  tiers,
+  tracks,
+  type Tier,
+  type Track,
+} from "./catalog";
 import "./styles.css";
 
-type Page = "home" | "lesson" | "architecture" | "design";
-const tracks = [
+type Page = "home" | "catalog" | "track" | "lesson" | "architecture" | "design";
+const skillNodes = [
   { name: "Linux", icon: ">_", x: 8, y: 51, state: "done", color: "#60a5fa" },
   { name: "Git", icon: "⑂", x: 24, y: 28, state: "done", color: "#f97316" },
   {
@@ -46,13 +53,13 @@ const tracks = [
     state: "active",
     color: "#a78bfa",
   },
-  { name: "Helm", icon: "◉", x: 76, y: 49, state: "locked", color: "#818cf8" },
+  { name: "Helm", icon: "◉", x: 76, y: 49, state: "active", color: "#818cf8" },
   {
     name: "Terraform",
     icon: "T",
     x: 92,
     y: 27,
-    state: "locked",
+    state: "active",
     color: "#a78bfa",
   },
   {
@@ -60,10 +67,10 @@ const tracks = [
     icon: "↻",
     x: 58,
     y: 72,
-    state: "locked",
+    state: "active",
     color: "#fbbf24",
   },
-  { name: "Cloud", icon: "☁", x: 80, y: 78, state: "locked", color: "#34d399" },
+  { name: "Cloud", icon: "☁", x: 80, y: 78, state: "active", color: "#34d399" },
 ];
 const lessonSteps = [
   {
@@ -119,6 +126,9 @@ function App() {
   const [search, setSearch] = useState(false);
   const [xp, setXp] = useState(1280);
   const [streak] = useState(7);
+  const [selectedTrack, setSelectedTrack] = useState<Track>(
+    tracks.find((track) => track.name === "Kubernetes")!,
+  );
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
   }, [dark]);
@@ -141,6 +151,10 @@ function App() {
     setPage(p);
     scrollTo({ top: 0, behavior: "smooth" });
   };
+  const openTrack = (track: Track) => {
+    setSelectedTrack(track);
+    go("track");
+  };
   return (
     <div className="app">
       <Nav
@@ -161,13 +175,23 @@ function App() {
           transition={{ duration: 0.28 }}
         >
           {page === "home" && <Home go={go} />}{" "}
+          {page === "catalog" && <Catalog openTrack={openTrack} />}{" "}
+          {page === "track" && (
+            <TrackPage track={selectedTrack} setXp={setXp} />
+          )}{" "}
           {page === "lesson" && <Lesson setXp={setXp} />}{" "}
           {page === "architecture" && <Architecture />}{" "}
           {page === "design" && <DesignSystem />}
         </motion.main>
       </AnimatePresence>
       <Footer go={go} />
-      {search && <SearchPalette close={() => setSearch(false)} go={go} />}
+      {search && (
+        <SearchPalette
+          close={() => setSearch(false)}
+          go={go}
+          openTrack={openTrack}
+        />
+      )}
     </div>
   );
 }
@@ -205,10 +229,16 @@ function Nav({
           Skill tree
         </button>
         <button
+          className={page === "catalog" || page === "track" ? "on" : ""}
+          onClick={() => go("catalog")}
+        >
+          All tracks
+        </button>
+        <button
           className={page === "lesson" ? "on" : ""}
           onClick={() => go("lesson")}
         >
-          Kubernetes lab
+          Flagship lab
         </button>
         <button
           className={page === "architecture" ? "on" : ""}
@@ -258,7 +288,8 @@ function Home({ go }: { go: (p: Page) => void }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            THE PRACTICAL DEVOPS MAP <span>•</span> 6 OF 64 SKILLS UNLOCKED
+            THE PRACTICAL ENGINEERING MAP <span>•</span> {tracks.length} TRACKS
+            · ALL FREE
           </motion.div>
           <h1>
             Learn production.
@@ -270,8 +301,8 @@ function Home({ go }: { go: (p: Page) => void }) {
             commands, and build the muscle memory interviews actually test.
           </p>
           <div className="hero-cta">
-            <button className="primary" onClick={() => go("lesson")}>
-              Continue Kubernetes <ArrowRight size={17} />
+            <button className="primary" onClick={() => go("catalog")}>
+              Explore all {tracks.length} tracks <ArrowRight size={17} />
             </button>
             <button className="secondary" onClick={() => go("architecture")}>
               Explore the platform
@@ -318,8 +349,8 @@ function Home({ go }: { go: (p: Page) => void }) {
               Available
             </span>
             <span>
-              <i />
-              Locked
+              <i className="active" />
+              Free & unlocked
             </span>
           </div>
         </div>
@@ -369,9 +400,9 @@ function Home({ go }: { go: (p: Page) => void }) {
               <h3>The midnight cascade</h3>
               <p>Kafka lag. OOMKills. A failed deploy. You have 45 minutes.</p>
             </div>
-            <span className="boss-lock">
-              <Lock /> Unlock at level 8
-            </span>
+            <button className="secondary" onClick={() => go("catalog")}>
+              Start free <ArrowRight size={14} />
+            </button>
           </article>
         </div>
       </section>
@@ -407,7 +438,7 @@ function SkillTree({ go }: { go: (p: Page) => void }) {
           strokeDasharray="9 8"
         />
       </svg>
-      {tracks.map((t, i) => (
+      {skillNodes.map((t, i) => (
         <motion.button
           key={t.name}
           className={"node " + t.state}
@@ -423,17 +454,15 @@ function SkillTree({ go }: { go: (p: Page) => void }) {
           transition={{ delay: i * 0.07, type: "spring" }}
           onClick={() => t.name === "Kubernetes" && go("lesson")}
         >
-          <span>{t.state === "locked" ? <Lock size={17} /> : t.icon}</span>
+          <span>{t.icon}</span>
           <b>{t.name}</b>
           <small>
             {t.state === "done" ? (
               <>
                 <Check size={10} /> MASTERED
               </>
-            ) : t.state === "active" ? (
-              "AVAILABLE"
             ) : (
-              "LOCKED"
+              "FREE"
             )}
           </small>
         </motion.button>
@@ -884,13 +913,457 @@ function Interview({
     </div>
   );
 }
+
+function Catalog({ openTrack }: { openTrack: (track: Track) => void }) {
+  const [category, setCategory] = useState<string>("All");
+  const [query, setQuery] = useState("");
+  const visible = tracks.filter(
+    (track) =>
+      (category === "All" || track.category === category) &&
+      track.name.toLowerCase().includes(query.toLowerCase()),
+  );
+  return (
+    <div className="catalog-page">
+      <section className="catalog-hero">
+        <div>
+          <span className="kicker">THE COMPLETE OPSQUEST LIBRARY</span>
+          <h1>
+            Every track. Every tier.
+            <br />
+            <em>Zero paywalls.</em>
+          </h1>
+          <p>
+            {tracks.length} practical technology tracks spanning infrastructure,
+            data, analytics, and testing. Every track includes Beginner,
+            Intermediate, Advanced, and Interview-Ready incident labs.
+          </p>
+        </div>
+        <div className="catalog-stats">
+          <div>
+            <b>{tracks.length}</b>
+            <span>free tracks</span>
+          </div>
+          <div>
+            <b>{tracks.length * 4}</b>
+            <span>tier missions</span>
+          </div>
+          <div>
+            <b>100%</b>
+            <span>unlocked</span>
+          </div>
+        </div>
+      </section>
+      <section className="catalog-body">
+        <div className="catalog-tools">
+          <div className="category-tabs">
+            <button
+              className={category === "All" ? "on" : ""}
+              onClick={() => setCategory("All")}
+            >
+              All
+            </button>
+            {categories.map((item) => (
+              <button
+                className={category === item ? "on" : ""}
+                onClick={() => setCategory(item)}
+                key={item}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+          <label className="track-search">
+            <Search size={15} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Find a technology…"
+            />
+          </label>
+        </div>
+        {categories
+          .filter((item) => category === "All" || category === item)
+          .map((group) => {
+            const groupTracks = visible.filter(
+              (track) => track.category === group,
+            );
+            if (!groupTracks.length) return null;
+            return (
+              <div className="track-group" key={group}>
+                <div className="track-group-head">
+                  <div>
+                    <span className="kicker">{group.toUpperCase()}</span>
+                    <h2>{group}</h2>
+                  </div>
+                  <span>{groupTracks.length} TRACKS · ALL FREE</span>
+                </div>
+                <div className="track-grid">
+                  {groupTracks.map((track) => (
+                    <motion.button
+                      whileHover={{ y: -4 }}
+                      className="track-card"
+                      style={{ "--track": track.color } as React.CSSProperties}
+                      onClick={() => openTrack(track)}
+                      key={track.slug}
+                    >
+                      <div className="track-icon">{track.icon}</div>
+                      <span className="free-pill">
+                        <Check size={10} /> FREE
+                      </span>
+                      <h3>{track.name}</h3>
+                      <p>{track.scenario}</p>
+                      <div className="tier-dots">
+                        {tiers.map((tier) => (
+                          <span key={tier}>
+                            <i />
+                            {tier}
+                          </span>
+                        ))}
+                      </div>
+                      <footer>
+                        Open track <ArrowRight size={14} />
+                      </footer>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+      </section>
+    </div>
+  );
+}
+
+function TrackPage({
+  track,
+  setXp,
+}: {
+  track: Track;
+  setXp: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  const [tier, setTier] = useState<Tier>("Beginner");
+  const [diagramStep, setDiagramStep] = useState(0);
+  const [input, setInput] = useState("");
+  const [history, setHistory] = useState<{ command: string; output: string }[]>(
+    [],
+  );
+  const [fixed, setFixed] = useState(false);
+  const [complete, setComplete] = useState(false);
+  const meta = tierMeta[tier];
+  useEffect(() => {
+    setDiagramStep(0);
+    setHistory([]);
+    setInput("");
+    setFixed(false);
+    setComplete(false);
+  }, [tier, track]);
+  const run = () => {
+    const command = input.trim();
+    if (!command) return;
+    let output = `Command not available in this ${track.name} lab. Try the diagnostic or repair command shown above.`;
+    if (command === track.command) output = track.output;
+    if (command === track.fix) {
+      output = `Applied: ${track.fix}\nChange accepted. Run validation to prove recovery.`;
+      setFixed(true);
+    }
+    if (command === track.validator)
+      output = fixed
+        ? "Validation passed: target state is healthy."
+        : "Validation failed: apply the repair first.";
+    setHistory((items) => [...items, { command, output }]);
+    setInput("");
+  };
+  const finish = () => {
+    if (fixed && !complete) {
+      setComplete(true);
+      setXp((value) => value + meta.xp);
+    }
+  };
+  return (
+    <div className="track-page">
+      <section
+        className="track-banner"
+        style={{ "--track": track.color } as React.CSSProperties}
+      >
+        <div className="track-symbol">{track.icon}</div>
+        <div>
+          <span className="kicker">
+            {track.category.toUpperCase()} · COMPLETE SKILL TRACK
+          </span>
+          <h1>{track.name}</h1>
+          <p>
+            Four practical tiers. Every lesson, lab, solution, and interview
+            drill is free.
+          </p>
+        </div>
+        <div className="free-seal">
+          <Check />
+          <b>100% FREE</b>
+          <span>NO LOCKS</span>
+        </div>
+      </section>
+      <nav className="tier-nav">
+        {tiers.map((item, index) => (
+          <button
+            key={item}
+            className={tier === item ? "on" : ""}
+            onClick={() => setTier(item)}
+          >
+            <span>{index + 1}</span>
+            <div>
+              <b>{item}</b>
+              <small>{tierMeta[item].label}</small>
+            </div>
+            <em>FREE</em>
+          </button>
+        ))}
+      </nav>
+      <div className="track-content">
+        <div className="track-intro">
+          <div>
+            <span className="badge medium">{tier.toUpperCase()}</span>
+            <span>{meta.xp} XP</span>
+            <span>15–25 MIN</span>
+          </div>
+          <h2>
+            {meta.label}: {track.name}
+          </h2>
+          <p>
+            {track.scenario} {meta.focus}
+          </p>
+        </div>
+        <section className="track-module">
+          <div className="module-number">01</div>
+          <div>
+            <span className="kicker">ANIMATED SYSTEM MODEL</span>
+            <h2>Follow the failure path</h2>
+            <div className="track-diagram">
+              <div className="track-flow">
+                {track.concept.map((item, index) => (
+                  <React.Fragment key={item}>
+                    <button
+                      onClick={() => setDiagramStep(index)}
+                      className={
+                        index === diagramStep
+                          ? "hot"
+                          : index < diagramStep
+                            ? "past"
+                            : ""
+                      }
+                    >
+                      <span>{index + 1}</span>
+                      <b>{item}</b>
+                    </button>
+                    {index < 3 && (
+                      <motion.i
+                        animate={
+                          index === diagramStep - 1 ? { scaleX: [0, 1] } : {}
+                        }
+                      />
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+              <p>
+                <b>Step {diagramStep + 1}:</b>{" "}
+                {diagramStep === 0
+                  ? "The request or event enters the system."
+                  : diagramStep === 1
+                    ? "The platform evaluates state and exposes the failure signal."
+                    : diagramStep === 2
+                      ? "The targeted repair changes the relevant control point."
+                      : "Automated validation proves the production outcome."}
+              </p>
+              <div className="scrub">
+                {track.concept.map((_, index) => (
+                  <button
+                    className={index <= diagramStep ? "on" : ""}
+                    onClick={() => setDiagramStep(index)}
+                    key={index}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+        <section className="track-module">
+          <div className="module-number">02</div>
+          <div>
+            <span className="kicker">WORKING WALKTHROUGH</span>
+            <h2>Inspect the real signal</h2>
+            <Command
+              cmd={track.command}
+              output={track.output}
+              why={`This command exposes the evidence needed to diagnose the ${track.name} incident before changing production.`}
+            />
+            <div className="repair-callout">
+              <span>SAFE REPAIR</span>
+              <code>{track.fix}</code>
+              <p>
+                Apply only after the diagnostic output confirms this exact
+                failure mode.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section className="track-module">
+          <div className="module-number">03</div>
+          <div>
+            <span className="kicker">YOUR TURN · VALIDATED SANDBOX</span>
+            <h2>Resolve the incident</h2>
+            <div className="challenge">
+              <div className="challenge-head">
+                <div>
+                  <ShieldCheck />
+                  <span>
+                    <b>{tier} mission</b>
+                    <small>{track.name} · isolated practice environment</small>
+                  </span>
+                </div>
+                <span className="free-pill">FREE LAB</span>
+              </div>
+              <p>{track.scenario}</p>
+              <ol>
+                <li>Run the diagnostic command and interpret its output.</li>
+                <li>Apply the exact, smallest safe repair.</li>
+                <li>Run the validator and explain why the system recovered.</li>
+              </ol>
+            </div>
+            <div className="terminal">
+              <div className="terminal-bar">
+                <span>
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <b>
+                  opsquest / {track.slug} / {tier.toLowerCase()}
+                </b>
+                <em>CONNECTED</em>
+              </div>
+              <div className="terminal-body">
+                {history.length === 0 && (
+                  <div className="term-intro">
+                    Sandbox ready. Start with:
+                    <br />
+                    <b>{track.command}</b>
+                  </div>
+                )}
+                {history.map((item, index) => (
+                  <div className="term-entry" key={index}>
+                    <div>
+                      <span>ops@lab:~$</span> {item.command}
+                    </div>
+                    <pre>{item.output}</pre>
+                  </div>
+                ))}
+                <div className="prompt">
+                  <span>ops@lab:~$</span>
+                  <input
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    onKeyDown={(event) => event.key === "Enter" && run()}
+                    placeholder="type the real command…"
+                  />
+                  <button onClick={run}>Run</button>
+                </div>
+              </div>
+            </div>
+            <div className="validator">
+              <div>
+                <span className={fixed ? "check yes" : "check"}>
+                  {fixed ? <Check /> : <CircleHelp />}
+                </span>
+                <div>
+                  <b>Track-specific validator</b>
+                  <p>
+                    {fixed
+                      ? `Repair accepted. Validator: ${track.validator}`
+                      : "Waiting for the evidenced repair command."}
+                  </p>
+                </div>
+              </div>
+              <button
+                className={fixed ? "primary" : "secondary"}
+                disabled={!fixed || complete}
+                onClick={finish}
+              >
+                {complete ? (
+                  <>
+                    <Check /> Complete · +{meta.xp} XP
+                  </>
+                ) : (
+                  <>
+                    Validate mission <ArrowRight />
+                  </>
+                )}
+              </button>
+            </div>
+            {complete && (
+              <motion.div
+                className="success"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <Award />
+                <div>
+                  <b>
+                    {track.name} {tier} completed
+                  </b>
+                  <span>
+                    XP awarded. The next tier remains free and available.
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </section>
+        <section className="track-module">
+          <div className="module-number">04</div>
+          <div>
+            <span className="kicker">INTERVIEW-READY</span>
+            <h2>Explain the decision, not just the command</h2>
+            <div className="spoken-answer">
+              <span>60–90 SECOND MODEL ANSWER</span>
+              <p>“{track.interview}”</p>
+            </div>
+            <Interview
+              q={`How would you diagnose this ${track.name} incident under pressure?`}
+              company="Production screening"
+              difficulty={tier === "Interview-Ready" ? "HARD" : "MEDIUM"}
+            >
+              <p>{track.interview}</p>
+              <p>
+                <b>Hands-on proof:</b> run <code>{track.command}</code>, apply{" "}
+                <code>{track.fix}</code>, and prove the outcome with{" "}
+                <code>{track.validator}</code>.
+              </p>
+            </Interview>
+            <Interview
+              q={`What is the most dangerous shortcut in this ${track.name} scenario?`}
+              company="SRE panel"
+              difficulty="HARD"
+            >
+              <p>
+                Changing state before collecting evidence. The interviewer is
+                testing whether you can preserve evidence, limit blast radius,
+                make a reversible change, and validate the user-visible outcome.
+              </p>
+            </Interview>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 function Architecture() {
   const groups = [
     [
       "Learn",
       [
         "Skill tree",
-        "64 technology tracks",
+        `${tracks.length} technology tracks`,
         "Lesson player",
         "Interactive sandboxes",
         "Command library",
@@ -1067,22 +1540,41 @@ function DesignSystem() {
 function SearchPalette({
   close,
   go,
+  openTrack,
 }: {
   close: () => void;
   go: (p: Page) => void;
+  openTrack: (track: Track) => void;
 }) {
   const [q, setQ] = useState("");
-  const items = useMemo(
-    () =>
-      [
-        ["Debug a CrashLoopBackOff", "Kubernetes lesson", "lesson"],
-        ["Kubernetes skill tree", "Track", "home"],
-        ["Information architecture", "Document", "architecture"],
-        ["Design system", "Document", "design"],
-        ["kubectl logs --previous", "Command", "lesson"],
-      ].filter((x) => x[0].toLowerCase().includes(q.toLowerCase())),
-    [q],
-  );
+  const items = useMemo(() => {
+    const trackResults = tracks.map((track) => ({
+      label: track.name,
+      meta: `${track.category} · 4 free tiers`,
+      track,
+    }));
+    const pages = [
+      {
+        label: "All free skill tracks",
+        meta: "Complete catalog",
+        page: "catalog" as Page,
+      },
+      {
+        label: "Debug a CrashLoopBackOff",
+        meta: "Flagship Kubernetes lesson",
+        page: "lesson" as Page,
+      },
+      {
+        label: "Information architecture",
+        meta: "Document",
+        page: "architecture" as Page,
+      },
+      { label: "Design system", meta: "Document", page: "design" as Page },
+    ];
+    return [...trackResults, ...pages]
+      .filter((item) => item.label.toLowerCase().includes(q.toLowerCase()))
+      .slice(0, 12);
+  }, [q]);
   return (
     <div className="modal" onMouseDown={close}>
       <motion.div
@@ -1104,17 +1596,18 @@ function SearchPalette({
           </button>
         </div>
         <div className="results">
-          {items.map((x) => (
+          {items.map((item) => (
             <button
-              key={x[0]}
+              key={item.label}
               onClick={() => {
-                go(x[2] as Page);
+                if ("track" in item && item.track) openTrack(item.track);
+                else if ("page" in item && item.page) go(item.page);
                 close();
               }}
             >
               <span>
-                <b>{x[0]}</b>
-                <small>{x[1]}</small>
+                <b>{item.label}</b>
+                <small>{item.meta}</small>
               </span>
               <ArrowRight />
             </button>
