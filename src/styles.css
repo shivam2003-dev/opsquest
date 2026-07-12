@@ -1,15 +1,15 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap");
 :root {
   font-family: Manrope, sans-serif;
-  color: #eff0f6;
-  background: #08090d;
+  color: #111827;
+  background: #f8fafc;
   font-synthesis: none;
-  --bg: #08090d;
-  --surface: #101117;
-  --surface2: #15171f;
-  --line: #292b36;
-  --text: #f4f4f7;
-  --muted: #9599a9;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface2: #f1f5f9;
+  --line: #cbd5e1;
+  --text: #111827;
+  --muted: #475569;
   --purple: #8b5cf6;
   --cyan: #22d3ee;
   --green: #34d399;
@@ -310,10 +310,10 @@
 }
 .course-reader {
   display: grid;
-  grid-template-columns: 340px minmax(0, 900px);
-  justify-content: center;
-  max-width: 1440px;
-  margin: auto;
+  grid-template-columns: 340px minmax(0, 1fr);
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 .course-reader :where(
   p,
@@ -3384,4 +3384,235 @@ header nav button.on:after {
   .catalog-hero h1 {
     font-size: 45px;
   }
+}
+
+/* Light-only product theme. Dark panels are intentionally removed. */
+[data-theme="light"] .capstone-section,
+[data-theme="light"] .mock-launch,
+[data-theme="light"] .boss,
+[data-theme="light"] .lesson-complete {
+  border-color: #cbd5e1;
+  background: #f5f3ff;
+  color: #111827;
+}
+[data-theme="light"] .quest-card,
+[data-theme="light"] .revealed-solution > div,
+[data-theme="light"] .interview-self-grade,
+[data-theme="light"] .command,
+[data-theme="light"] .cmd-top,
+[data-theme="light"] .terminal,
+[data-theme="light"] .terminal-bar,
+[data-theme="light"] .runbook-workspace,
+[data-theme="light"] .runbook-bar,
+[data-theme="light"] .runbook-actions,
+[data-theme="light"] .boss-console,
+[data-theme="light"] .boss-console > header,
+[data-theme="light"] .palette,
+[data-theme="light"] .type-demo code,
+[data-theme="light"] .decision-table code,
+[data-theme="light"] .capstone-grid article > code {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #1f2937;
+  box-shadow: none;
+}
+[data-theme="light"] .mock-launch {
+  border-color: #c4b5fd;
+  background: #ede9fe;
+}
+[data-theme="light"] .mock-launch :where(b, span) { color: #312e81; }
+[data-theme="light"] .mock-question textarea,
+[data-theme="light"] .lesson-notes textarea,
+[data-theme="light"] .runbook-workspace textarea,
+[data-theme="light"] .boss-comms textarea,
+[data-theme="light"] .prompt input {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #111827;
+}
+[data-theme="light"] .revealed-solution > div { background: #f8fafc; }
+[data-theme="light"] .revealed-solution :where(b, p),
+[data-theme="light"] .interview-self-grade :where(b, p),
+[data-theme="light"] .mock-model-answer :where(b, p, blockquote),
+[data-theme="light"] .quest-card :where(h3, p, span),
+[data-theme="light"] .boss :where(h3, p, span),
+[data-theme="light"] .lesson-complete :where(b, span),
+[data-theme="light"] .command :where(code, p, span, button),
+[data-theme="light"] .terminal :where(p, small, span, b, em, button, label, pre),
+[data-theme="light"] .runbook-workspace :where(p, small, span, b, em, button, code, label, pre),
+[data-theme="light"] .boss-console :where(p, small, span, b, em, button, code, label),
+[data-theme="light"] .palette :where(b, small, span, button, input) {
+  color: #334155;
+}
+[data-theme="light"] .revealed-solution code,
+[data-theme="light"] .decision-table code,
+[data-theme="light"] .capstone-grid article > code {
+  border: 1px solid #d1fae5;
+  background: #ecfdf5;
+  color: #047857;
+}
+[data-theme="light"] .terminal-bar,
+[data-theme="light"] .cmd-top,
+[data-theme="light"] .runbook-bar {
+  border-bottom-color: #cbd5e1;
+  background: #f1f5f9;
+}
+[data-theme="light"] .terminal-body,
+[data-theme="light"] .term-entry,
+[data-theme="light"] .prompt {
+  background: #ffffff;
+  color: #1f2937;
+}
+[data-theme="light"] .term-entry.error pre { color: #be123c; }
+[data-theme="light"] .term-entry.ok pre { color: #334155; }
+[data-theme="light"] .palette-input { border-bottom-color: #cbd5e1; }
+[data-theme="light"] .palette-input input { color: #111827; }
+[data-theme="light"] .results button:hover,
+[data-theme="light"] .results button.selected { background: #ede9fe; }
+[data-theme="light"] .node,
+[data-theme="light"] .flow-node span {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  box-shadow: 0 0 0 7px #f1f5f9;
+}
+[data-theme="light"] .easy,
+[data-theme="light"] .check.yes,
+[data-theme="light"] .success,
+[data-theme="light"] .repair-callout,
+[data-theme="light"] .lesson-link.finished span,
+[data-theme="light"] .free-seal {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+  box-shadow: none;
+}
+[data-theme="light"] .medium {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+[data-theme="light"] .lesson-link.current { color: #312e81; }
+
+/* Global reading controls. Small is the 12px baseline. */
+[data-reading-size="medium"] main :where(p, small, span, em, button, code, label, dt, dd, input, textarea, pre, li, kbd),
+[data-reading-size="medium"] .course-reader :where(b, strong, h4) {
+  font-size: 16px !important;
+}
+[data-reading-size="large"] main :where(p, small, span, em, button, code, label, dt, dd, input, textarea, pre, li, kbd),
+[data-reading-size="large"] .course-reader :where(b, strong, h4) {
+  font-size: 20px !important;
+}
+[data-reading-size="medium"] .course-reader { grid-template-columns: 390px minmax(0, 1fr); }
+[data-reading-size="large"] .course-reader { grid-template-columns: 440px minmax(0, 1fr); }
+
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgb(15 23 42 / 0.22);
+}
+.reading-settings {
+  position: absolute;
+  top: 76px;
+  right: 24px;
+  width: min(420px, calc(100vw - 32px));
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 0.2);
+  padding: 18px;
+}
+.reading-settings > header,
+.reading-settings > header > div,
+.focus-setting,
+.focus-setting > div { display: flex; align-items: center; }
+.reading-settings > header { justify-content: space-between; }
+.reading-settings > header > div,
+.focus-setting > div { gap: 10px; }
+.reading-settings header span :where(b, small),
+.focus-setting span :where(b, small) { display: block; }
+.reading-settings header b,
+.focus-setting b { font-size: 14px; }
+.reading-settings header small,
+.focus-setting small { color: #64748b; margin-top: 3px; }
+.reading-settings > header > button { border: 0; background: transparent; color: #475569; }
+.reading-setting-group { margin-top: 22px; }
+.reading-setting-group > label { display: block; color: #475569; font-weight: 700; margin-bottom: 9px; }
+.size-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.size-options button {
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #334155;
+  padding: 12px 8px;
+}
+.size-options button :where(b, span) { display: block; }
+.size-options button span { color: #64748b; margin-top: 4px; }
+.size-options button.active { border-color: #7c3aed; background: #ede9fe; color: #5b21b6; }
+.focus-setting {
+  justify-content: space-between;
+  gap: 15px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 20px;
+  padding-top: 18px;
+}
+.focus-setting > button {
+  width: 48px;
+  height: 27px;
+  border: 0;
+  border-radius: 99px;
+  background: #cbd5e1;
+  padding: 3px;
+}
+.focus-setting > button i {
+  display: block;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 0.2s ease;
+}
+.focus-setting > button.active { background: #7c3aed; }
+.focus-setting > button.active i { transform: translateX(21px); }
+.focus-toolbar {
+  position: fixed;
+  z-index: 210;
+  top: 14px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 8px 30px rgb(15 23 42 / 0.15);
+  padding: 7px;
+}
+.focus-toolbar > span,
+.focus-toolbar > button { display: inline-flex; align-items: center; gap: 6px; }
+.focus-toolbar > span { color: #5b21b6; font-weight: 700; padding: 0 5px; }
+.focus-toolbar > div { display: flex; gap: 3px; }
+.focus-toolbar button {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  padding: 7px 9px;
+}
+.focus-toolbar button.active { border-color: #7c3aed; background: #ede9fe; color: #5b21b6; }
+.focus-mode > header,
+.focus-mode > .site-footer { display: none; }
+.focus-mode > main { min-height: 100vh; }
+.focus-mode .course-sidebar { top: 0; height: 100vh; }
+.focus-mode .course-lesson { padding-top: 80px; }
+
+@media (max-width: 700px) {
+  .reading-settings { top: 68px; right: 16px; }
+  .focus-toolbar { left: 10px; right: 10px; justify-content: space-between; }
+  .focus-toolbar > span { display: none; }
+  .focus-mode .course-reader { display: block; }
+  .focus-mode .course-sidebar { display: none; }
+  .focus-mode .course-lesson { width: 100%; padding-top: 92px; }
 }

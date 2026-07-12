@@ -13,16 +13,18 @@ import {
   Flame,
   GitBranch,
   Layers3,
-  Moon,
+  Maximize2,
+  Minimize2,
   NotebookPen,
   Pause,
   Play,
   RotateCcw,
   Search,
+  Settings2,
   ShieldCheck,
-  Sparkles,
   TerminalSquare,
   Trophy,
+  Type,
   X,
   Zap,
 } from "lucide-react";
@@ -170,8 +172,18 @@ function App() {
             ? "design"
             : "home";
   const [page, setPage] = useState<Page>(initialPage);
-  const [dark, setDark] = useState(true);
   const [search, setSearch] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(
+    () => localStorage.getItem("opsquest-focus-mode") === "true",
+  );
+  const [readingSize, setReadingSize] = useState<"small" | "medium" | "large">(
+    () =>
+      (localStorage.getItem("opsquest-reading-size") as
+        | "small"
+        | "medium"
+        | "large") || "small",
+  );
   const [xp, setXp] = useState(() => {
     const stored = Number(localStorage.getItem("opsquest-xp"));
     return Number.isFinite(stored) && stored > 0 ? stored : 1280;
@@ -182,8 +194,15 @@ function App() {
   );
   const [selectedLesson, setSelectedLesson] = useState(initialLesson || 0);
   useEffect(() => {
-    document.documentElement.dataset.theme = dark ? "dark" : "light";
-  }, [dark]);
+    document.documentElement.dataset.theme = "light";
+  }, []);
+  useEffect(() => {
+    document.documentElement.dataset.readingSize = readingSize;
+    localStorage.setItem("opsquest-reading-size", readingSize);
+  }, [readingSize]);
+  useEffect(() => {
+    localStorage.setItem("opsquest-focus-mode", String(focusMode));
+  }, [focusMode]);
   useEffect(() => {
     localStorage.setItem("opsquest-xp", String(xp));
   }, [xp]);
@@ -197,7 +216,10 @@ function App() {
         e.preventDefault();
         setSearch(true);
       }
-      if (e.key === "Escape") setSearch(false);
+      if (e.key === "Escape") {
+        setSearch(false);
+        setSettingsOpen(false);
+      }
     };
     addEventListener("keydown", h);
     return () => removeEventListener("keydown", h);
@@ -268,13 +290,12 @@ function App() {
     go("track");
   };
   return (
-    <div className="app">
+    <div className={`app ${focusMode ? "focus-mode" : ""}`}>
       <Nav
         go={go}
         page={page}
-        dark={dark}
-        setDark={setDark}
         setSearch={setSearch}
+        setSettingsOpen={setSettingsOpen}
         xp={xp}
         streak={streak}
       />
@@ -304,6 +325,23 @@ function App() {
         </motion.main>
       </AnimatePresence>
       <Footer go={go} />
+      {focusMode && (
+        <div className="focus-toolbar" aria-label="Focus mode controls">
+          <span><Maximize2 size={15} /> Focus mode</span>
+          <div>
+            {(["small", "medium", "large"] as const).map((size) => (
+              <button
+                className={readingSize === size ? "active" : ""}
+                onClick={() => setReadingSize(size)}
+                key={size}
+              >
+                {size === "small" ? "S" : size === "medium" ? "M" : "L"}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setFocusMode(false)}><Minimize2 size={15} /> Exit focus</button>
+        </div>
+      )}
       {search && (
         <SearchPalette
           close={() => setSearch(false)}
@@ -312,23 +350,30 @@ function App() {
           openLesson={openLesson}
         />
       )}
+      {settingsOpen && (
+        <ReadingSettings
+          close={() => setSettingsOpen(false)}
+          focusMode={focusMode}
+          setFocusMode={setFocusMode}
+          readingSize={readingSize}
+          setReadingSize={setReadingSize}
+        />
+      )}
     </div>
   );
 }
 function Nav({
   go,
   page,
-  dark,
-  setDark,
   setSearch,
+  setSettingsOpen,
   xp,
   streak,
 }: {
   go: (p: Page) => void;
   page: Page;
-  dark: boolean;
-  setDark: (v: boolean) => void;
   setSearch: (v: boolean) => void;
+  setSettingsOpen: (v: boolean) => void;
   xp: number;
   streak: number;
 }) {
@@ -399,16 +444,81 @@ function Nav({
         </span>
         <button
           className="icon-btn"
-          aria-label="Toggle theme"
-          onClick={() => setDark(!dark)}
+          aria-label="Reading settings"
+          onClick={() => setSettingsOpen(true)}
         >
-          {dark ? <Moon size={17} /> : <Sparkles size={17} />}
+          <Settings2 size={17} />
         </button>
         <div className="avatar">SK</div>
       </div>
     </header>
   );
 }
+
+function ReadingSettings({
+  close,
+  focusMode,
+  setFocusMode,
+  readingSize,
+  setReadingSize,
+}: {
+  close: () => void;
+  focusMode: boolean;
+  setFocusMode: (value: boolean) => void;
+  readingSize: "small" | "medium" | "large";
+  setReadingSize: (value: "small" | "medium" | "large") => void;
+}) {
+  const sizes = [
+    { id: "small" as const, label: "Small", value: "12px" },
+    { id: "medium" as const, label: "Medium", value: "16px" },
+    { id: "large" as const, label: "Large", value: "20px" },
+  ];
+  return (
+    <div className="settings-backdrop" onMouseDown={close}>
+      <motion.section
+        className="reading-settings"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Reading settings"
+        initial={{ opacity: 0, y: -10, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div><Type size={19} /><span><b>Reading settings</b><small>Light theme is always on</small></span></div>
+          <button aria-label="Close reading settings" onClick={close}><X size={17} /></button>
+        </header>
+        <div className="reading-setting-group">
+          <label>Text size</label>
+          <div className="size-options">
+            {sizes.map((size) => (
+              <button
+                className={readingSize === size.id ? "active" : ""}
+                onClick={() => setReadingSize(size.id)}
+                key={size.id}
+              >
+                <b>{size.label}</b><span>{size.value}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="focus-setting">
+          <div><Maximize2 size={18} /><span><b>Focus mode</b><small>Hide navigation and use the full screen for learning.</small></span></div>
+          <button
+            className={focusMode ? "active" : ""}
+            role="switch"
+            aria-checked={focusMode}
+            onClick={() => {
+              setFocusMode(!focusMode);
+              close();
+            }}
+          ><i /></button>
+        </div>
+      </motion.section>
+    </div>
+  );
+}
+
 function Home({ go }: { go: (p: Page) => void }) {
   return (
     <>
