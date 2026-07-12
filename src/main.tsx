@@ -1613,6 +1613,44 @@ function CourseLessonReader({
     const notes = JSON.parse(localStorage.getItem("opsquest-notes-v1") || "{}") as Record<string, string>;
     return notes[studyKey] || "";
   });
+  const runbookKey = `opsquest-runbook:${track.slug}`;
+  const defaultRunbook = `version: 1
+name: ${track.slug}-production-recovery
+track: ${track.name}
+
+preconditions:
+  - confirm the target environment and object scope
+  - record incident timestamp and user impact
+  - confirm rollback authority before mutation
+
+steps:
+  - id: observe
+    purpose: preserve the failing baseline
+    run: |
+      ${track.command}
+
+  - id: repair
+    purpose: apply the smallest evidenced change
+    requires: observe
+    run: |
+      ${track.fix}
+
+  - id: verify
+    purpose: prove convergence and user recovery
+    requires: repair
+    run: |
+      ${track.validator}
+
+on_failure:
+  action: stop further mutation, preserve output, and execute the reviewed rollback
+  notify: incident commander and ${track.name} service owner
+`;
+  const [runbook, setRunbook] = useState(
+    () => localStorage.getItem(runbookKey) || defaultRunbook,
+  );
+  const [runbookChecks, setRunbookChecks] = useState<
+    { label: string; pass: boolean }[] | null
+  >(null);
   const done = completedLessons.includes(lesson.id);
   useEffect(() => {
     setStep(0);
@@ -1629,6 +1667,9 @@ function CourseLessonReader({
     setBookmarked(bookmarks.includes(key));
     setNote(notes[key] || "");
     setNotesOpen(false);
+    const nextRunbookKey = `opsquest-runbook:${track.slug}`;
+    setRunbook(localStorage.getItem(nextRunbookKey) || defaultRunbook);
+    setRunbookChecks(null);
   }, [lesson.id, track.slug]);
   const toggleBookmark = () => {
     const bookmarks = JSON.parse(localStorage.getItem("opsquest-bookmarks-v1") || "[]") as string[];
@@ -1645,6 +1686,22 @@ function CourseLessonReader({
     else delete notes[studyKey];
     localStorage.setItem("opsquest-notes-v1", JSON.stringify(notes));
   };
+  const updateRunbook = (value: string) => {
+    setRunbook(value);
+    localStorage.setItem(runbookKey, value);
+    setRunbookChecks(null);
+  };
+  const validateRunbook = () => {
+    setRunbookChecks([
+      { label: "Versioned runbook metadata", pass: /version:\s*1/.test(runbook) && runbook.includes(`track: ${track.name}`) },
+      { label: "Explicit preconditions before mutation", pass: runbook.includes("preconditions:") && runbook.indexOf("preconditions:") < runbook.indexOf("- id: repair") },
+      { label: "Track diagnostic is preserved exactly", pass: runbook.includes(track.command) },
+      { label: "Repair depends on observation", pass: runbook.includes(track.fix) && /requires:\s*observe/.test(runbook) },
+      { label: "Verification depends on repair", pass: runbook.includes(track.validator) && /requires:\s*repair/.test(runbook) },
+      { label: "Failure path stops mutation and escalates", pass: runbook.includes("on_failure:") && /stop|rollback/i.test(runbook) && /notify:/i.test(runbook) },
+    ]);
+  };
+  const runbookPassed = runbookChecks?.every((check) => check.pass) ?? false;
   const execute = () => {
     const value = input.trim();
     if (!value) return;
@@ -1854,6 +1911,44 @@ function CourseLessonReader({
             ))}
           </div>
         </section>
+        {lesson.id === 10 && (
+          <section>
+            <span className="kicker">AUTOMATION WORKSPACE</span>
+            <h2>Build the production runbook</h2>
+            <p>
+              Edit the complete declarative runbook below. The validator requires scoped preconditions, the exact {track.name} diagnostic, an evidence-gated repair, explicit verification, and a safe failure path.
+            </p>
+            <div className="runbook-workspace">
+              <div className="runbook-bar">
+                <div><span /><span /><span /></div>
+                <b>{track.slug}-production-recovery.yaml</b>
+                <em>{runbook.split("\n").length} LINES · AUTOSAVED</em>
+              </div>
+              <textarea
+                value={runbook}
+                onChange={(event) => updateRunbook(event.target.value)}
+                spellCheck={false}
+                aria-label={`${track.name} production runbook editor`}
+                rows={30}
+              />
+              <div className="runbook-actions">
+                <button onClick={() => updateRunbook(defaultRunbook)}><RotateCcw size={14} /> Reset template</button>
+                <button className="primary" onClick={validateRunbook}><ShieldCheck size={14} /> Validate runbook</button>
+              </div>
+            </div>
+            {runbookChecks && (
+              <div className={`runbook-results ${runbookPassed ? "passed" : "failed"}`}>
+                <header>
+                  <b>{runbookPassed ? "Runbook accepted" : "Runbook needs work"}</b>
+                  <span>{runbookChecks.filter((check) => check.pass).length}/{runbookChecks.length} checks passed</span>
+                </header>
+                {runbookChecks.map((check) => (
+                  <p key={check.label}>{check.pass ? <Check size={14} /> : <X size={14} />} {check.label}</p>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
         <section>
           <span className="kicker">EMBEDDED PLAYGROUND</span>
           <h2>Practice without local setup</h2>
@@ -1988,6 +2083,8 @@ function CourseLessonReader({
             <span>
               {done
                 ? "Progress saved · +40 XP"
+                : lesson.id === 10 && !runbookPassed
+                  ? "Validate the automation runbook, sandbox, and knowledge check."
                 : validated
                   ? "Sandbox passed. Finish the knowledge check to continue."
                   : "Complete the sandbox in order, then pass the knowledge check."}
@@ -1996,7 +2093,12 @@ function CourseLessonReader({
           <button
             className="primary"
             onClick={complete}
-            disabled={done || !validated || quiz !== lesson.assessment.correct}
+            disabled={
+              done ||
+              !validated ||
+              quiz !== lesson.assessment.correct ||
+              (lesson.id === 10 && !runbookPassed)
+            }
           >
             {done ? (
               <>
