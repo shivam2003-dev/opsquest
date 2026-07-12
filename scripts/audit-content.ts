@@ -1,10 +1,18 @@
 import { lessonsFor, projectsFor, tiers, tracks } from "../src/catalog";
+import { readFileSync } from "node:fs";
 
 const expected = [
   "Linux", "Git", "Docker", "Kubernetes", "Helm", "Ansible", "Terraform", "Jenkins", "GitHub Actions", "GitLab CI", "Argo CD", "OKD (OpenShift)", "Nginx", "HAProxy", "Envoy", "Kong", "Istio", "F5", "cert-manager", "external-dns", "Keycloak", "Vault", "Trivy", "WireGuard", "Prometheus", "Grafana", "OpenTelemetry", "AWS", "Azure", "Google Cloud", "Cloudflare", "Airflow", "Spark", "Kafka", "Flink", "dbt", "Dagster", "Prefect", "BigQuery", "Snowflake", "Databricks", "ClickHouse", "Elasticsearch", "PostgreSQL", "MongoDB", "Redis", "RabbitMQ", "Power BI", "Tableau", "Cypress", "Playwright", "Postman", "Gatling",
 ];
 
 const failures: string[] = [];
+const stylesheet = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
+for (const declaration of stylesheet.matchAll(/font(?:-size)?\s*:\s*([^;]+)/g)) {
+  for (const size of declaration[1].matchAll(/([0-9]+(?:\.[0-9]+)?)px/g)) {
+    if (Number(size[1]) < 12)
+      failures.push(`Font size below 12px: ${declaration[0].trim()}`);
+  }
+}
 const actual = tracks.map((track) => track.name);
 for (const name of expected) if (!actual.includes(name)) failures.push(`Missing track: ${name}`);
 for (const name of actual) if (!expected.includes(name)) failures.push(`Unexpected track: ${name}`);
