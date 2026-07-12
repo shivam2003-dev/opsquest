@@ -2368,6 +2368,8 @@ header nav button.on:after {
 }
 .results {
   padding: 8px;
+  max-height: 58vh;
+  overflow: auto;
 }
 .results button {
   width: 100%;
@@ -2380,9 +2382,18 @@ header nav button.on:after {
   justify-content: space-between;
   align-items: center;
 }
-.results button:hover {
+.results button:hover,
+.results button.selected {
   background: #22242c;
 }
+.results button > em {
+  min-width: 64px;
+  color: #a78bfa;
+  font: 7px DM Mono;
+  font-style: normal;
+  text-transform: uppercase;
+}
+.results button > span { flex: 1; min-width: 0; padding-right: 8px; }
 .results b,
 .results small {
   display: block;
@@ -2398,6 +2409,7 @@ header nav button.on:after {
 .results svg {
   width: 14px;
 }
+.empty-search { padding: 35px 15px; text-align: center; color: #777b88; font: 9px DM Mono; }
 .palette > footer {
   display: flex;
   gap: 18px;

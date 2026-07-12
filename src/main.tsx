@@ -308,6 +308,7 @@ function App() {
           close={() => setSearch(false)}
           go={go}
           openTrack={openTrack}
+          openLesson={openLesson}
         />
       )}
     </div>
@@ -2683,40 +2684,103 @@ function SearchPalette({
   close,
   go,
   openTrack,
+  openLesson,
 }: {
   close: () => void;
   go: (p: Page) => void;
   openTrack: (track: Track) => void;
+  openLesson: (track: Track, lesson: LessonSpec) => void;
 }) {
   const [q, setQ] = useState("");
-  const items = useMemo(() => {
+  const [selected, setSelected] = useState(0);
+  type SearchResult = {
+    id: string;
+    label: string;
+    meta: string;
+    type: "Track" | "Lesson" | "Interview" | "Command" | "Page";
+    searchable: string;
+    track?: Track;
+    lesson?: LessonSpec;
+    page?: Page;
+  };
+  const index = useMemo<SearchResult[]>(() => {
     const trackResults = tracks.map((track) => ({
+      id: `track:${track.slug}`,
       label: track.name,
-      meta: `${track.category} · 4 free tiers`,
+      meta: `${track.category} · 12 lessons · 4 tiers`,
+      type: "Track" as const,
+      searchable: `${track.name} ${track.category} ${track.scenario} ${track.concept.join(" ")}`,
       track,
     }));
-    const pages = [
-      {
-        label: "All free skill tracks",
-        meta: "Complete catalog",
-        page: "catalog" as Page,
-      },
-      {
-        label: "Debug a CrashLoopBackOff",
-        meta: "Flagship Kubernetes lesson",
-        page: "lesson" as Page,
-      },
-      {
-        label: "Information architecture",
-        meta: "Document",
-        page: "architecture" as Page,
-      },
-      { label: "Design system", meta: "Document", page: "design" as Page },
+    const lessonResults = tracks.flatMap((track) =>
+      lessonsFor(track).map((lesson) => ({
+        id: `lesson:${track.slug}:${lesson.id}`,
+        label: lesson.title,
+        meta: `${track.name} · ${lesson.tier} · Lesson ${lesson.id}`,
+        type: "Lesson" as const,
+        searchable: `${track.name} ${track.category} ${lesson.title} ${lesson.summary} ${lesson.objective} ${lesson.hook}`,
+        track,
+        lesson,
+      })),
+    );
+    const interviewResults = tracks.flatMap((track) =>
+      interviewQuestionsFor(track).map((question) => ({
+        id: `interview:${question.id}`,
+        label: question.title,
+        meta: `${question.company} · ${question.difficulty} · ${track.name}`,
+        type: "Interview" as const,
+        searchable: `${question.title} ${question.scenario} ${question.reasoning} ${question.company} ${track.name}`,
+        page: "interview" as Page,
+      })),
+    );
+    const commandResults = tracks.flatMap((track) =>
+      [
+        { label: track.command, phase: "Diagnostic", lesson: 4 },
+        { label: track.fix, phase: "Repair", lesson: 6 },
+        { label: track.validator, phase: "Validator", lesson: 7 },
+      ].map((command) => ({
+        id: `command:${track.slug}:${command.phase}`,
+        label: command.label,
+        meta: `${track.name} · ${command.phase} command`,
+        type: "Command" as const,
+        searchable: `${track.name} ${track.scenario} ${command.phase} ${command.label}`,
+        track,
+        lesson: lessonsFor(track)[command.lesson - 1],
+      })),
+    );
+    const pages: SearchResult[] = [
+      { id: "page:tracks", label: "All free skill tracks", meta: "Complete 53-track catalog", type: "Page", searchable: "catalog tracks technologies", page: "catalog" },
+      { id: "page:interview", label: "Interview question bank", meta: "159 incident questions", type: "Page", searchable: "interview questions mock readiness", page: "interview" },
+      { id: "page:progress", label: "My progress dashboard", meta: "Lessons, tiers, notes, and readiness", type: "Page", searchable: "progress dashboard resume xp notes bookmarks", page: "progress" },
+      { id: "page:flagship", label: "Debug a CrashLoopBackOff", meta: "Flagship Kubernetes lab", type: "Page", searchable: "kubernetes crashloop pod flagship", page: "lesson" },
+      { id: "page:sitemap", label: "Information architecture", meta: "Platform sitemap", type: "Page", searchable: "sitemap architecture", page: "architecture" },
+      { id: "page:design", label: "Design system", meta: "Tokens and components", type: "Page", searchable: "design colors typography", page: "design" },
     ];
-    return [...trackResults, ...pages]
-      .filter((item) => item.label.toLowerCase().includes(q.toLowerCase()))
-      .slice(0, 12);
-  }, [q]);
+    return [...pages, ...trackResults, ...lessonResults, ...interviewResults, ...commandResults];
+  }, []);
+  const items = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    if (!query) return index.slice(0, 12);
+    return index
+      .map((item) => {
+        const label = item.label.toLowerCase();
+        const searchable = item.searchable.toLowerCase();
+        const score = label === query ? 100 : label.startsWith(query) ? 70 : label.includes(query) ? 45 : searchable.includes(query) ? 20 : 0;
+        return { item, score };
+      })
+      .filter((result) => result.score > 0)
+      .sort((a, b) => b.score - a.score || a.item.label.localeCompare(b.item.label))
+      .slice(0, 18)
+      .map((result) => result.item);
+  }, [q, index]);
+  useEffect(() => setSelected(0), [q]);
+  const open = (item: SearchResult | undefined) => {
+    if (!item) return;
+    if (item.track && item.lesson) openLesson(item.track, item.lesson);
+    else if (item.track) openTrack(item.track);
+    else if (item.page) go(item.page);
+    close();
+  };
   return (
     <div className="modal" onMouseDown={close}>
       <motion.div
@@ -2732,21 +2796,32 @@ function SearchPalette({
             placeholder="Search skills, incidents, commands…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                setSelected((value) => Math.min(value + 1, items.length - 1));
+              } else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setSelected((value) => Math.max(value - 1, 0));
+              } else if (event.key === "Enter") {
+                event.preventDefault();
+                open(items[selected]);
+              }
+            }}
           />
           <button onClick={close}>
             <X />
           </button>
         </div>
         <div className="results">
-          {items.map((item) => (
+          {items.map((item, itemIndex) => (
             <button
-              key={item.label}
-              onClick={() => {
-                if ("track" in item && item.track) openTrack(item.track);
-                else if ("page" in item && item.page) go(item.page);
-                close();
-              }}
+              key={item.id}
+              className={selected === itemIndex ? "selected" : ""}
+              onMouseEnter={() => setSelected(itemIndex)}
+              onClick={() => open(item)}
             >
+              <em>{item.type}</em>
               <span>
                 <b>{item.label}</b>
                 <small>{item.meta}</small>
@@ -2754,6 +2829,7 @@ function SearchPalette({
               <ArrowRight />
             </button>
           ))}
+          {!items.length && <div className="empty-search">No matching track, lesson, question, or command.</div>}
         </div>
         <footer>
           <span>↑↓ Navigate</span>
