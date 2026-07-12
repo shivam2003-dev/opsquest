@@ -443,6 +443,59 @@
 }
 .lesson-glossary dt { color: #d4d6dd; font-size: 10px; font-weight: 700; }
 .lesson-glossary dd { margin-left: 0; }
+.progress-page { max-width: 1180px; margin: 0 auto; padding: 70px 28px 110px; }
+.progress-hero { display: flex; align-items: center; justify-content: space-between; gap: 30px; border-bottom: 1px solid var(--line); padding-bottom: 35px; }
+.progress-hero h1 { font-size: 52px; letter-spacing: -0.05em; margin: 10px 0; }
+.progress-hero p { max-width: 690px; color: var(--muted); font-size: 13px; line-height: 1.75; }
+.overall-ring {
+  width: 126px;
+  height: 126px;
+  flex: 0 0 auto;
+  padding: 8px;
+  border-radius: 50%;
+  background: conic-gradient(#8b5cf6 var(--progress), #262832 0);
+}
+.overall-ring > div { width: 100%; height: 100%; display: grid; place-content: center; text-align: center; border-radius: 50%; background: var(--bg); }
+.overall-ring b { font-size: 27px; }
+.overall-ring span { color: #777b88; font: 7px DM Mono; }
+.progress-summary { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 22px 0 60px; }
+.progress-summary > div { border: 1px solid var(--line); border-radius: 9px; background: var(--surface); padding: 14px; }
+.progress-summary svg { width: 15px; color: #a78bfa; }
+.progress-summary b,
+.progress-summary span { display: block; }
+.progress-summary b { font-size: 17px; margin: 9px 0 4px; }
+.progress-summary span { color: #777b88; font: 7px DM Mono; }
+.category-progress-section h2,
+.track-progress-section h2 { font-size: 28px; margin: 8px 0 18px; }
+.category-progress-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-bottom: 60px; }
+.category-progress-grid article { display: grid; grid-template-columns: 1fr 120px 42px; align-items: center; gap: 14px; border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 14px; }
+.category-progress-grid b,
+.category-progress-grid span { display: block; }
+.category-progress-grid b { font-size: 10px; }
+.category-progress-grid span { color: #777b88; font: 7px DM Mono; margin-top: 4px; }
+.category-progress-grid i,
+.track-progress-bar { display: block; height: 5px; border-radius: 99px; overflow: hidden; background: #272933; }
+.category-progress-grid i em,
+.track-progress-bar em { display: block; height: 100%; background: #8b5cf6; }
+.category-progress-grid strong { font: 10px DM Mono; color: #c4b5fd; text-align: right; }
+.track-progress-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.track-progress-grid article { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 14px; }
+.track-progress-grid header { display: flex; align-items: center; gap: 10px; }
+.track-progress-grid header > span { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; font: 10px DM Mono; }
+.track-progress-grid header div { flex: 1; }
+.track-progress-grid header b,
+.track-progress-grid header small { display: block; }
+.track-progress-grid header b { font-size: 10px; }
+.track-progress-grid header small { color: #737784; font: 7px DM Mono; margin-top: 3px; }
+.track-progress-grid header em { color: #9da1ad; font: 8px DM Mono; font-style: normal; }
+.track-progress-bar { margin: 13px 0; }
+.tier-dots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.tier-dots span { border: 1px solid var(--line); border-radius: 5px; color: #686c78; padding: 6px; font: 7px DM Mono; text-align: center; }
+.tier-dots span b { display: block; font-size: 7px; margin-top: 3px; }
+.tier-dots span.started { color: #fbbf24; border-color: #6b531c; }
+.tier-dots span.complete { color: #67d7b1; border-color: #27624f; background: #34d3990a; }
+.track-progress-actions { display: flex; gap: 6px; margin-top: 13px; }
+.track-progress-actions button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--line); background: var(--surface2); border-radius: 6px; padding: 8px; font-size: 8px; }
 .interview-page {
   max-width: 1180px;
   margin: 0 auto;
@@ -972,6 +1025,12 @@
     margin-left: 0;
   }
   .interview-page { padding: 45px 18px 90px; }
+  .progress-page { padding: 45px 18px 90px; }
+  .progress-hero { align-items: flex-start; }
+  .progress-hero h1 { font-size: 39px; }
+  .progress-summary { grid-template-columns: repeat(2, 1fr); }
+  .category-progress-grid { grid-template-columns: 1fr; }
+  .track-progress-grid { grid-template-columns: 1fr; }
   .interview-hero { display: block; }
   .interview-hero h1 { font-size: 39px; }
   .interview-stats { min-width: 0; margin-top: 24px; }

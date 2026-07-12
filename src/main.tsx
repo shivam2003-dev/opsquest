@@ -39,7 +39,7 @@ import {
 } from "./catalog";
 import "./styles.css";
 
-type Page = "home" | "catalog" | "track" | "lesson" | "interview" | "architecture" | "design";
+type Page = "home" | "catalog" | "track" | "lesson" | "interview" | "progress" | "architecture" | "design";
 type CourseProgress = Record<string, number[]>;
 
 const readCourseProgress = (): CourseProgress => {
@@ -159,6 +159,8 @@ function App() {
       ? "catalog"
       : window.location.pathname === "/interview"
         ? "interview"
+      : window.location.pathname === "/progress"
+        ? "progress"
       : window.location.pathname.startsWith("/flagship")
         ? "lesson"
         : window.location.pathname === "/sitemap"
@@ -219,6 +221,8 @@ function App() {
             ? "catalog"
             : window.location.pathname === "/interview"
               ? "interview"
+            : window.location.pathname === "/progress"
+              ? "progress"
               : window.location.pathname === "/sitemap"
                 ? "architecture"
                 : window.location.pathname === "/design-system"
@@ -237,6 +241,7 @@ function App() {
         home: "/",
         catalog: "/tracks",
         interview: "/interview",
+        progress: "/progress",
         lesson: "/flagship/kubernetes-crashloopbackoff",
         architecture: "/sitemap",
         design: "/design-system",
@@ -292,6 +297,7 @@ function App() {
           )}{" "}
           {page === "lesson" && <Lesson setXp={setXp} />}{" "}
           {page === "interview" && <InterviewBank openLesson={openLesson} />}{" "}
+          {page === "progress" && <ProgressDashboard xp={xp} openTrack={openTrack} openLesson={openLesson} />}{" "}
           {page === "architecture" && <Architecture />}{" "}
           {page === "design" && <DesignSystem />}
         </motion.main>
@@ -357,6 +363,12 @@ function Nav({
           onClick={() => go("interview")}
         >
           Interview bank
+        </button>
+        <button
+          className={page === "progress" ? "on" : ""}
+          onClick={() => go("progress")}
+        >
+          My progress
         </button>
         <button
           className={page === "architecture" ? "on" : ""}
@@ -2011,6 +2023,136 @@ function CourseLessonReader({
           </button>
         </nav>
       </article>
+    </div>
+  );
+}
+
+function ProgressDashboard({
+  xp,
+  openTrack,
+  openLesson,
+}: {
+  xp: number;
+  openTrack: (track: Track) => void;
+  openLesson: (track: Track, lesson: LessonSpec) => void;
+}) {
+  const progress = readCourseProgress();
+  const bookmarks = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("opsquest-bookmarks-v1") || "[]") as string[];
+    } catch {
+      return [];
+    }
+  })();
+  const notes = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("opsquest-notes-v1") || "{}") as Record<string, string>;
+    } catch {
+      return {};
+    }
+  })();
+  const interviewStatus = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("opsquest-interview-status-v1") || "{}") as Record<string, "solved" | "retry">;
+    } catch {
+      return {};
+    }
+  })();
+  const totalLessons = tracks.length * 12;
+  const completedLessons = tracks.reduce(
+    (total, track) => total + (progress[track.slug] || []).length,
+    0,
+  );
+  const completedTracks = tracks.filter((track) => (progress[track.slug] || []).length === 12).length;
+  const allQuestions = tracks.flatMap((track) => interviewQuestionsFor(track));
+  const questionWeight = (question: InterviewQuestionSpec) =>
+    question.difficulty === "Hard" ? 3 : question.difficulty === "Medium" ? 2 : 1;
+  const interviewPoints = allQuestions
+    .filter((question) => interviewStatus[question.id] === "solved")
+    .reduce((total, question) => total + questionWeight(question), 0);
+  const maxInterviewPoints = allQuestions.reduce(
+    (total, question) => total + questionWeight(question),
+    0,
+  );
+  const readiness = Math.round((interviewPoints / maxInterviewPoints) * 100);
+  const overall = Math.round((completedLessons / totalLessons) * 100);
+  return (
+    <div className="progress-page">
+      <section className="progress-hero">
+        <div>
+          <span className="kicker">YOUR OPSQUEST LEARNING RECORD</span>
+          <h1>Progress dashboard</h1>
+          <p>Resume exactly where you stopped and see which skills, tiers, study notes, and interview topics need attention next.</p>
+        </div>
+        <div className="overall-ring" style={{ "--progress": `${overall * 3.6}deg` } as React.CSSProperties}>
+          <div><b>{overall}%</b><span>CURRICULUM</span></div>
+        </div>
+      </section>
+      <section className="progress-summary">
+        <div><Zap /><b>{xp.toLocaleString()}</b><span>Total XP</span></div>
+        <div><BookOpen /><b>{completedLessons}/{totalLessons}</b><span>Lessons completed</span></div>
+        <div><Trophy /><b>{completedTracks}/{tracks.length}</b><span>Tracks mastered</span></div>
+        <div><Bookmark /><b>{bookmarks.length}</b><span>Bookmarks</span></div>
+        <div><NotebookPen /><b>{Object.values(notes).filter(Boolean).length}</b><span>Saved notes</span></div>
+        <div><ShieldCheck /><b>{readiness}%</b><span>Interview readiness</span></div>
+      </section>
+      <section className="category-progress-section">
+        <span className="kicker">CATEGORY COVERAGE</span>
+        <h2>Progress by discipline</h2>
+        <div className="category-progress-grid">
+          {categories.map((category) => {
+            const categoryTracks = tracks.filter((track) => track.category === category);
+            const complete = categoryTracks.reduce((total, track) => total + (progress[track.slug] || []).length, 0);
+            const total = categoryTracks.length * 12;
+            const percent = Math.round((complete / total) * 100);
+            return (
+              <article key={category}>
+                <div><b>{category}</b><span>{complete}/{total} lessons</span></div>
+                <i><em style={{ width: `${percent}%` }} /></i>
+                <strong>{percent}%</strong>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+      <section className="track-progress-section">
+        <span className="kicker">ALL 53 SKILL TRACKS</span>
+        <h2>Continue learning</h2>
+        <div className="track-progress-grid">
+          {tracks.map((track) => {
+            const completed = progress[track.slug] || [];
+            const lessons = lessonsFor(track);
+            const next = lessons.find((lesson) => !completed.includes(lesson.id));
+            const tierCounts = tiers.map((tier) => ({
+              tier,
+              complete: lessons.filter((lesson) => lesson.tier === tier && completed.includes(lesson.id)).length,
+            }));
+            return (
+              <article key={track.slug}>
+                <header>
+                  <span style={{ color: track.color }}>{track.icon}</span>
+                  <div><b>{track.name}</b><small>{track.category}</small></div>
+                  <em>{completed.length}/12</em>
+                </header>
+                <i className="track-progress-bar"><em style={{ width: `${(completed.length / 12) * 100}%`, background: track.color }} /></i>
+                <div className="tier-dots">
+                  {tierCounts.map(({ tier, complete }) => (
+                    <span className={complete === 3 ? "complete" : complete ? "started" : ""} key={tier} title={`${tier}: ${complete}/3`}>
+                      {tier.slice(0, 1)} <b>{complete}/3</b>
+                    </span>
+                  ))}
+                </div>
+                <div className="track-progress-actions">
+                  <button onClick={() => openTrack(track)}>Overview</button>
+                  <button className="primary" onClick={() => next ? openLesson(track, next) : openLesson(track, lessons[11])}>
+                    {next ? `Resume lesson ${next.id}` : "Review track"} <ArrowRight size={13} />
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
