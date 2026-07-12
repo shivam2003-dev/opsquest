@@ -9,6 +9,7 @@ import {
   Check,
   ChevronRight,
   CircleHelp,
+  Clock,
   Flame,
   GitBranch,
   Layers3,
@@ -2067,6 +2068,121 @@ function interviewQuestionsFor(track: Track): InterviewQuestionSpec[] {
   ];
 }
 
+function MockInterview({
+  questions,
+  onExit,
+  onGrade,
+}: {
+  questions: InterviewQuestionSpec[];
+  onExit: () => void;
+  onGrade: (id: string, status: "solved" | "retry") => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const [seconds, setSeconds] = useState(20 * 60);
+  const [submitted, setSubmitted] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("opsquest-mock-draft-v1") || "{}");
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    if (submitted) return;
+    const timer = window.setInterval(() => {
+      setSeconds((value) => {
+        if (value <= 1) {
+          window.clearInterval(timer);
+          setSubmitted(true);
+          return 0;
+        }
+        return value - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [submitted]);
+  const answer = (value: string) => {
+    const next = { ...answers, [questions[index].id]: value };
+    setAnswers(next);
+    localStorage.setItem("opsquest-mock-draft-v1", JSON.stringify(next));
+  };
+  const question = questions[index];
+  const answered = questions.filter((item) => answers[item.id]?.trim()).length;
+  const finish = () => {
+    setSubmitted(true);
+    localStorage.removeItem("opsquest-mock-draft-v1");
+  };
+  return (
+    <div className="mock-shell">
+      <header className="mock-header">
+        <div>
+          <span className="kicker">TIMED · NO HINTS · FIVE INCIDENTS</span>
+          <h1>{submitted ? "Review your mock interview" : "Mock interview in progress"}</h1>
+        </div>
+        <div className={`mock-timer ${seconds < 180 ? "urgent" : ""}`}>
+          <Clock size={17} />
+          <b>{String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</b>
+          <span>{submitted ? "SUBMITTED" : "REMAINING"}</span>
+        </div>
+      </header>
+      <div className="mock-progress">
+        {questions.map((item, itemIndex) => (
+          <button
+            className={`${itemIndex === index ? "active" : ""} ${answers[item.id]?.trim() ? "answered" : ""}`}
+            onClick={() => setIndex(itemIndex)}
+            key={item.id}
+          >
+            {itemIndex + 1}
+          </button>
+        ))}
+        <span>{answered}/5 answered</span>
+      </div>
+      <article className="mock-question">
+        <div className="question-card-top">
+          <span className={`difficulty-${question.difficulty.toLowerCase()}`}>{question.difficulty}</span>
+          <span>{question.company}</span>
+          <span style={{ color: question.track.color }}>{question.track.icon} {question.track.name}</span>
+        </div>
+        <span className="kicker">QUESTION {index + 1} OF 5</span>
+        <h2>{question.title}</h2>
+        <p>{question.scenario}</p>
+        <label>Your structured answer</label>
+        <textarea
+          value={answers[question.id] || ""}
+          onChange={(event) => answer(event.target.value)}
+          disabled={submitted}
+          placeholder="State impact and scope, evidence you would collect, the decision path, repair, validation, and prevention…"
+          rows={9}
+        />
+        {!submitted && <small>Autosaved locally · solutions stay hidden until submission</small>}
+        {submitted && (
+          <div className="mock-model-answer">
+            <b>Model reasoning</b>
+            <p>{question.reasoning}</p>
+            <b>Strong spoken answer</b>
+            <blockquote>“{question.spokenAnswer}”</blockquote>
+            <div>
+              <button onClick={() => onGrade(question.id, "retry")}>Needs retry</button>
+              <button className="primary" onClick={() => onGrade(question.id, "solved")}><Check size={14} /> Answer was strong</button>
+            </div>
+          </div>
+        )}
+      </article>
+      <footer className="mock-footer">
+        <button disabled={index === 0} onClick={() => setIndex((value) => value - 1)}>← Previous</button>
+        <span>{answered === 5 ? "All questions answered" : `${5 - answered} unanswered`}</span>
+        {index < 4 ? (
+          <button className="primary" onClick={() => setIndex((value) => value + 1)}>Next question <ArrowRight size={14} /></button>
+        ) : submitted ? (
+          <button className="primary" onClick={onExit}>Finish review</button>
+        ) : (
+          <button className="primary" onClick={finish}>Submit mock interview</button>
+        )}
+      </footer>
+    </div>
+  );
+}
+
 function InterviewBank({
   openLesson,
 }: {
@@ -2077,6 +2193,7 @@ function InterviewBank({
   const [difficulty, setDifficulty] = useState("All difficulties");
   const [statusFilter, setStatusFilter] = useState("All status");
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [mockQuestions, setMockQuestions] = useState<InterviewQuestionSpec[] | null>(null);
   const [questionStatus, setQuestionStatus] = useState<
     Record<string, "solved" | "retry">
   >(() => {
@@ -2107,6 +2224,15 @@ function InterviewBank({
     localStorage.setItem("opsquest-interview-status-v1", JSON.stringify(next));
     setQuestionStatus(next);
   };
+  if (mockQuestions) {
+    return (
+      <MockInterview
+        questions={mockQuestions}
+        onExit={() => setMockQuestions(null)}
+        onGrade={setStatus}
+      />
+    );
+  }
   const solved = questions.filter((question) => questionStatus[question.id] === "solved");
   const retries = questions.filter((question) => questionStatus[question.id] === "retry");
   const weight = (question: InterviewQuestionSpec) =>
@@ -2139,6 +2265,18 @@ function InterviewBank({
           <span><b>{retries.length}</b> RETRY</span>
           <span><b>{readiness}%</b> READINESS</span>
         </div>
+      </section>
+      <section className="mock-launch">
+        <div>
+          <Trophy size={22} />
+          <div><b>Simulate a real screening round</b><span>5 randomized technologies · 20 minutes · no solutions until submission</span></div>
+        </div>
+        <button
+          className="primary"
+          onClick={() => setMockQuestions([...questions].sort(() => Math.random() - 0.5).slice(0, 5))}
+        >
+          Start mock interview <ArrowRight size={14} />
+        </button>
       </section>
       <section className="interview-filters">
         <label>
