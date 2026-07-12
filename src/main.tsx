@@ -2075,7 +2075,17 @@ function InterviewBank({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All categories");
   const [difficulty, setDifficulty] = useState("All difficulties");
+  const [statusFilter, setStatusFilter] = useState("All status");
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [questionStatus, setQuestionStatus] = useState<
+    Record<string, "solved" | "retry">
+  >(() => {
+    try {
+      return JSON.parse(localStorage.getItem("opsquest-interview-status-v1") || "{}");
+    } catch {
+      return {};
+    }
+  });
   const questions = useMemo(
     () => tracks.flatMap((track) => interviewQuestionsFor(track)),
     [],
@@ -2085,9 +2095,27 @@ function InterviewBank({
     return (
       searchable.includes(query.toLowerCase()) &&
       (category === "All categories" || question.track.category === category) &&
-      (difficulty === "All difficulties" || question.difficulty === difficulty)
+      (difficulty === "All difficulties" || question.difficulty === difficulty) &&
+      (statusFilter === "All status" ||
+        (statusFilter === "Solved" && questionStatus[question.id] === "solved") ||
+        (statusFilter === "Needs retry" && questionStatus[question.id] === "retry") ||
+        (statusFilter === "Unsolved" && !questionStatus[question.id]))
     );
   });
+  const setStatus = (id: string, status: "solved" | "retry") => {
+    const next = { ...questionStatus, [id]: status };
+    localStorage.setItem("opsquest-interview-status-v1", JSON.stringify(next));
+    setQuestionStatus(next);
+  };
+  const solved = questions.filter((question) => questionStatus[question.id] === "solved");
+  const retries = questions.filter((question) => questionStatus[question.id] === "retry");
+  const weight = (question: InterviewQuestionSpec) =>
+    question.difficulty === "Hard" ? 3 : question.difficulty === "Medium" ? 2 : 1;
+  const readiness = Math.round(
+    (solved.reduce((total, question) => total + weight(question), 0) /
+      questions.reduce((total, question) => total + weight(question), 0)) *
+      100,
+  );
   const toggle = (id: string) =>
     setRevealed((current) => {
       const next = new Set(current);
@@ -2107,8 +2135,9 @@ function InterviewBank({
         </div>
         <div className="interview-stats">
           <span><b>{questions.length}</b> QUESTIONS</span>
-          <span><b>{tracks.length}</b> TECHNOLOGIES</span>
-          <span><b>{new Set(questions.map((item) => item.company)).size}</b> COMPANIES</span>
+          <span><b>{solved.length}</b> SOLVED</span>
+          <span><b>{retries.length}</b> RETRY</span>
+          <span><b>{readiness}%</b> READINESS</span>
         </div>
       </section>
       <section className="interview-filters">
@@ -2126,17 +2155,31 @@ function InterviewBank({
           <option>Medium</option>
           <option>Hard</option>
         </select>
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <option>All status</option>
+          <option>Unsolved</option>
+          <option>Solved</option>
+          <option>Needs retry</option>
+        </select>
         <b>{filtered.length} results</b>
       </section>
       <section className="interview-list">
         {filtered.map((question) => {
           const isOpen = revealed.has(question.id);
           return (
-            <article key={question.id} className="interview-question-card">
+            <article
+              key={question.id}
+              className={`interview-question-card ${questionStatus[question.id] || "unsolved"}`}
+            >
               <div className="question-card-top">
                 <span className={`difficulty-${question.difficulty.toLowerCase()}`}>{question.difficulty}</span>
                 <span>{question.company}</span>
                 <span style={{ color: question.track.color }}>{question.track.icon} {question.track.name}</span>
+                {questionStatus[question.id] && (
+                  <span className={`question-status ${questionStatus[question.id]}`}>
+                    {questionStatus[question.id] === "solved" ? "✓ Solved" : "↻ Needs retry"}
+                  </span>
+                )}
                 <em>{question.track.category}</em>
               </div>
               <h2>{question.title}</h2>
@@ -2157,6 +2200,14 @@ function InterviewBank({
                   <div>
                     <b>Hands-on proof</b>
                     {question.commands.map((command) => <code key={command}>$ {command}</code>)}
+                  </div>
+                  <div className="interview-self-grade">
+                    <div>
+                      <b>Record this attempt</b>
+                      <p>Be honest—the readiness score is useful only when it reflects recall without hints.</p>
+                    </div>
+                    <button className={questionStatus[question.id] === "retry" ? "active retry" : ""} onClick={() => setStatus(question.id, "retry")}>Needs retry</button>
+                    <button className={questionStatus[question.id] === "solved" ? "active solved" : ""} onClick={() => setStatus(question.id, "solved")}><Check size={14} /> Mark solved</button>
                   </div>
                 </div>
               )}

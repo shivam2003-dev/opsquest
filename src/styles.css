@@ -469,8 +469,8 @@
 }
 .interview-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  min-width: 350px;
+  grid-template-columns: repeat(4, 1fr);
+  min-width: 430px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface);
@@ -488,7 +488,7 @@
   top: 64px;
   z-index: 5;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 220px 170px auto;
+  grid-template-columns: minmax(220px, 1fr) 190px 145px 140px auto;
   gap: 8px;
   align-items: center;
   padding: 14px 0;
@@ -526,6 +526,8 @@
   background: var(--surface);
   padding: 22px;
 }
+.interview-question-card.solved { border-color: #27624f; }
+.interview-question-card.retry { border-color: #6b531c; }
 .question-card-top { display: flex; align-items: center; gap: 8px; }
 .question-card-top span,
 .question-card-top em {
@@ -540,6 +542,8 @@
 .question-card-top .difficulty-easy { color: #67d7b1; border-color: #27624f; }
 .question-card-top .difficulty-medium { color: #fbbf24; border-color: #6b531c; }
 .question-card-top .difficulty-hard { color: #fb9aaa; border-color: #703342; }
+.question-card-top .question-status.solved { color: #67d7b1; border-color: #27624f; }
+.question-card-top .question-status.retry { color: #fbbf24; border-color: #6b531c; }
 .interview-question-card h2 { font-size: 20px; margin: 17px 0 8px; }
 .interview-question-card > p { color: var(--muted); font-size: 11px; line-height: 1.7; }
 .question-actions { display: flex; gap: 8px; margin-top: 18px; }
@@ -568,6 +572,7 @@
   background: #0d0e12;
 }
 .revealed-solution > div:last-child { grid-column: 1 / -1; }
+.revealed-solution > div:nth-child(3) { grid-column: 1 / -1; }
 .revealed-solution b { color: #c4b5fd; font-size: 9px; }
 .revealed-solution p { color: var(--muted); font-size: 9px; line-height: 1.7; }
 .revealed-solution code {
@@ -580,6 +585,26 @@
   overflow: auto;
   font: 9px DM Mono;
 }
+.revealed-solution .interview-self-grade {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.interview-self-grade > div { flex: 1; }
+.interview-self-grade p { margin-bottom: 0; }
+.interview-self-grade button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  border-radius: 7px;
+  padding: 9px 11px;
+  font-size: 8px;
+}
+.interview-self-grade button.active.solved { border-color: #27624f; color: #67d7b1; }
+.interview-self-grade button.active.retry { border-color: #6b531c; color: #fbbf24; }
 .why-box {
   border-left: 2px solid #8b5cf6;
   background: #8b5cf60b;
@@ -878,6 +903,12 @@
   .question-card-top em { margin-left: 0; }
   .revealed-solution { grid-template-columns: 1fr; }
   .revealed-solution > div:last-child { grid-column: auto; }
+  .revealed-solution > div:nth-child(3) { grid-column: auto; }
+  .revealed-solution .interview-self-grade {
+    grid-column: auto;
+    align-items: stretch;
+    flex-direction: column;
+  }
   .question-actions { flex-direction: column; }
   .lesson-outline button em {
     display: none;
