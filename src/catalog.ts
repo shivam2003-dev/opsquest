@@ -1261,3 +1261,63 @@ export const lessonsFor = (track: Track): LessonSpec[] =>
 
 export const courseMinutes = (track: Track) =>
   lessonsFor(track).reduce((total, lesson) => total + lesson.minutes, 0);
+
+export type TierProject = {
+  tier: Tier;
+  title: string;
+  brief: string;
+  deliverables: [string, string, string];
+  proof: string;
+  xp: number;
+};
+
+export const projectsFor = (track: Track): TierProject[] => [
+  {
+    tier: "Beginner",
+    title: `Map and operate ${track.name}`,
+    brief: `Build an operator-ready map of ${track.concept.join(" → ")} and establish a trustworthy baseline for the production scenario: ${track.scenario}`,
+    deliverables: [
+      `An annotated four-stage ${track.name} architecture map with ownership boundaries`,
+      `A captured baseline from ${track.command}`,
+      `A one-page first-response checklist covering identity, scope, timestamp, and escalation`,
+    ],
+    proof: track.command,
+    xp: 120,
+  },
+  {
+    tier: "Intermediate",
+    title: `Diagnose and recover the ${track.name} incident`,
+    brief: `Use evidence to separate symptom, state, and cause; apply the smallest reversible repair; and prove the original user outcome recovered.`,
+    deliverables: [
+      "A timestamped before-state with the failing signal highlighted",
+      `A change record explaining why ${track.fix} is the narrowest safe repair`,
+      "A before/after validation record plus the user-visible smoke result",
+    ],
+    proof: track.validator,
+    xp: 220,
+  },
+  {
+    tier: "Advanced",
+    title: `Scale and harden ${track.name}`,
+    brief: `Prepare the recovered path for twice the load while reducing privilege and blast radius without breaking ${track.concept[3]}.`,
+    deliverables: [
+      "A bottleneck hypothesis with leading saturation signal, SLO, and rollback threshold",
+      "A least-privilege review across identity, action, resource, network path, and time",
+      "A failure-injection test proving the hardened design remains observable and recoverable",
+    ],
+    proof: track.validator,
+    xp: 340,
+  },
+  {
+    tier: "Interview-Ready",
+    title: `${track.name} production readiness review`,
+    brief: `Automate the runbook, recover a timed SEV-1, and defend the diagnosis, trade-offs, validation, and prevention plan in a 60–90 second interview response.`,
+    deliverables: [
+      `A validated ${track.slug}-production-recovery.yaml runbook`,
+      "A completed 15-minute boss incident with accepted commander update",
+      `A spoken answer grounded in ${track.command}, ${track.fix}, and ${track.validator}`,
+    ],
+    proof: track.validator,
+    xp: 500,
+  },
+];

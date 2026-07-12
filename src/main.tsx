@@ -30,6 +30,7 @@ import {
   categories,
   courseMinutes,
   lessonsFor,
+  projectsFor,
   tierMeta,
   tiers,
   tracks,
@@ -1321,6 +1322,39 @@ function TrackPage({
                 ))}
             </section>
           ))}
+        </div>
+      </section>
+      <section className="capstone-section">
+        <div className="capstone-head">
+          <div><span className="kicker">FOUR TIER CAPSTONES</span><h2>Ship proof, not just progress</h2></div>
+          <p>Each tier ends with an operator-grade artifact and an exact proof command. All projects are free and remain available for review.</p>
+        </div>
+        <div className="capstone-grid">
+          {projectsFor(track).map((project) => {
+            const tierLessons = courseLessons.filter((lesson) => lesson.tier === project.tier);
+            const completeCount = tierLessons.filter((lesson) => completedLessons.includes(lesson.id)).length;
+            const isComplete = completeCount === tierLessons.length;
+            const nextLesson = tierLessons.find((lesson) => !completedLessons.includes(lesson.id)) || tierLessons[tierLessons.length - 1];
+            return (
+              <article className={isComplete ? "completed" : ""} key={project.tier}>
+                <header>
+                  <span>{tiers.indexOf(project.tier) + 1}</span>
+                  <div><b>{project.tier} capstone</b><small>{completeCount}/3 lessons complete</small></div>
+                  <em>{project.xp} XP</em>
+                </header>
+                <h3>{project.title}</h3>
+                <p>{project.brief}</p>
+                <div className="capstone-deliverables">
+                  <b>Required deliverables</b>
+                  {project.deliverables.map((deliverable) => <span key={deliverable}><Check size={13} /> {deliverable}</span>)}
+                </div>
+                <code>$ {project.proof}</code>
+                <button className="primary" onClick={() => openLesson(track, nextLesson)}>
+                  {isComplete ? "Review capstone" : `Continue ${project.tier}`} <ArrowRight size={13} />
+                </button>
+              </article>
+            );
+          })}
         </div>
       </section>
       <nav className="tier-nav">
