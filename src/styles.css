@@ -453,6 +453,20 @@
   gap: 7px;
   margin-top: 8px;
 }
+.term-command {
+  color: #d5d7df;
+  font: 9px/1.6 DM Mono;
+  margin-bottom: 7px;
+}
+.term-command span { color: #67d7b1; }
+.term-entry.error pre { color: #fb9aaa; }
+.term-entry.ok pre { color: #b7bbc7; }
+.lesson-outline button.completed { border-color: #27624f; }
+.lesson-outline button.completed > span {
+  background: #34d39918;
+  color: #67d7b1;
+  border-color: #27624f;
+}
 .command-hints button {
   border: 1px solid var(--line);
   background: var(--surface);

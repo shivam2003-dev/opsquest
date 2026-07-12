@@ -37,6 +37,25 @@ import {
 import "./styles.css";
 
 type Page = "home" | "catalog" | "track" | "lesson" | "architecture" | "design";
+type CourseProgress = Record<string, number[]>;
+
+const readCourseProgress = (): CourseProgress => {
+  try {
+    return JSON.parse(localStorage.getItem("opsquest-progress-v1") || "{}") as CourseProgress;
+  } catch {
+    return {};
+  }
+};
+
+const completedFor = (slug: string) => readCourseProgress()[slug] || [];
+
+const saveLessonCompletion = (slug: string, lessonId: number) => {
+  const progress = readCourseProgress();
+  progress[slug] = Array.from(new Set([...(progress[slug] || []), lessonId])).sort(
+    (a, b) => a - b,
+  );
+  localStorage.setItem("opsquest-progress-v1", JSON.stringify(progress));
+};
 const skillNodes = [
   { name: "Linux", icon: ">_", x: 8, y: 51, state: "done", color: "#60a5fa" },
   { name: "Git", icon: "⑂", x: 24, y: 28, state: "done", color: "#f97316" },
@@ -145,7 +164,10 @@ function App() {
   const [page, setPage] = useState<Page>(initialPage);
   const [dark, setDark] = useState(true);
   const [search, setSearch] = useState(false);
-  const [xp, setXp] = useState(1280);
+  const [xp, setXp] = useState(() => {
+    const stored = Number(localStorage.getItem("opsquest-xp"));
+    return Number.isFinite(stored) && stored > 0 ? stored : 1280;
+  });
   const [streak] = useState(7);
   const [selectedTrack, setSelectedTrack] = useState<Track>(
     initialTrack || tracks.find((track) => track.name === "Kubernetes")!,
@@ -154,6 +176,9 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
   }, [dark]);
+  useEffect(() => {
+    localStorage.setItem("opsquest-xp", String(xp));
+  }, [xp]);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -1131,6 +1156,9 @@ function TrackPage({
   );
   const [fixed, setFixed] = useState(false);
   const [complete, setComplete] = useState(false);
+  const [completedLessons, setCompletedLessons] = useState<number[]>(() =>
+    completedFor(track.slug),
+  );
   const meta = tierMeta[tier];
   useEffect(() => {
     setDiagramStep(0);
@@ -1139,6 +1167,9 @@ function TrackPage({
     setFixed(false);
     setComplete(false);
   }, [tier, track]);
+  useEffect(() => {
+    setCompletedLessons(completedFor(track.slug));
+  }, [track.slug, selectedLesson]);
   const run = () => {
     const command = input.trim();
     if (!command) return;
@@ -1207,6 +1238,9 @@ function TrackPage({
           </div>
           <div className="roadmap-metrics">
             <span>
+              <b>{completedLessons.length}/12</b> COMPLETE
+            </span>
+            <span>
               <b>12</b> LESSONS
             </span>
             <span>
@@ -1232,10 +1266,13 @@ function TrackPage({
                 .filter((lesson) => lesson.tier === courseTier)
                 .map((lesson) => (
                   <button
+                    className={completedLessons.includes(lesson.id) ? "completed" : ""}
                     onClick={() => openLesson(track, lesson)}
                     key={lesson.id}
                   >
-                    <span>{lesson.id}</span>
+                    <span>
+                      {completedLessons.includes(lesson.id) ? <Check size={12} /> : lesson.id}
+                    </span>
                     <div>
                       <b>{lesson.title}</b>
                       <small>{lesson.summary}</small>
@@ -1520,41 +1557,63 @@ function CourseLessonReader({
 }) {
   const [step, setStep] = useState(0);
   const [input, setInput] = useState("");
-  const [output, setOutput] = useState("");
+  const [terminalHistory, setTerminalHistory] = useState<
+    { command: string; output: string; status: "ok" | "error" }[]
+  >([]);
+  const [observed, setObserved] = useState(false);
   const [repaired, setRepaired] = useState(false);
+  const [validated, setValidated] = useState(false);
   const [quiz, setQuiz] = useState<number | null>(null);
-  const [done, setDone] = useState(false);
+  const [completedLessons, setCompletedLessons] = useState<number[]>(() =>
+    completedFor(track.slug),
+  );
+  const done = completedLessons.includes(lesson.id);
   useEffect(() => {
     setStep(0);
     setInput("");
-    setOutput("");
+    setTerminalHistory([]);
+    setObserved(false);
     setRepaired(false);
+    setValidated(false);
     setQuiz(null);
-    setDone(false);
+    setCompletedLessons(completedFor(track.slug));
   }, [lesson.id, track.slug]);
   const execute = () => {
     const value = input.trim();
-    if (value === track.command) setOutput(track.output);
-    else if (value === track.fix) {
-      setOutput(
-        `Applied safely: ${track.fix}\nThe target state changed. Verify the outcome next.`,
-      );
-      setRepaired(true);
-    } else if (value === track.validator)
-      setOutput(
-        repaired
-          ? "PASS — recovery verified and user-visible health restored."
-          : "FAIL — no evidenced repair has been applied.",
-      );
-    else
-      setOutput(
-        `Unknown in this lab. Use one of the exact ${track.name} commands introduced in the lesson.`,
-      );
+    if (!value) return;
+    let output = "";
+    let status: "ok" | "error" = "ok";
+    if (value === track.command) {
+      output = track.output;
+      setObserved(true);
+    } else if (value === track.fix) {
+      if (!observed) {
+        output = "BLOCKED — capture the diagnostic baseline before changing state.";
+        status = "error";
+      } else {
+        output = `Applied safely: ${track.fix}\nThe target state changed. Verify the outcome next.`;
+        setRepaired(true);
+        setValidated(false);
+      }
+    } else if (value === track.validator) {
+      if (!repaired) {
+        output = "FAIL — the evidenced repair has not been applied.";
+        status = "error";
+      } else {
+        output = "PASS — recovery verified and user-visible health restored.";
+        setValidated(true);
+      }
+    } else {
+      output = `Unknown in this lab. Use one of the exact ${track.name} commands introduced in the lesson.`;
+      status = "error";
+    }
+    setTerminalHistory((items) => [...items, { command: value, output, status }]);
     setInput("");
   };
   const complete = () => {
     if (!done) {
-      setDone(true);
+      saveLessonCompletion(track.slug, lesson.id);
+      setCompletedLessons(completedFor(track.slug));
       setXp((value) => value + 40);
     }
   };
@@ -1571,10 +1630,10 @@ function CourseLessonReader({
           </div>
         </div>
         <div className="course-progress">
-          <span>Lesson {lesson.id} of 12</span>
-          <b>{Math.round(((lesson.id - 1) / 12) * 100)}%</b>
+          <span>{completedLessons.length} of 12 complete</span>
+          <b>{Math.round((completedLessons.length / 12) * 100)}%</b>
           <i>
-            <em style={{ width: `${((lesson.id - 1) / 12) * 100}%` }} />
+            <em style={{ width: `${(completedLessons.length / 12) * 100}%` }} />
           </i>
         </div>
         {tiers.map((courseTier) => (
@@ -1589,7 +1648,7 @@ function CourseLessonReader({
                   key={item.id}
                 >
                   <span>
-                    {item.id < lesson.id ? <Check size={11} /> : item.id}
+                    {completedLessons.includes(item.id) ? <Check size={11} /> : item.id}
                   </span>
                   <div>
                     <b>{item.title}</b>
@@ -1724,11 +1783,12 @@ function CourseLessonReader({
               <em>FREE SANDBOX</em>
             </div>
             <div className="terminal-body">
-              {output && (
-                <div className="term-entry">
-                  <pre>{output}</pre>
+              {terminalHistory.map((entry, index) => (
+                <div className={`term-entry ${entry.status}`} key={`${entry.command}-${index}`}>
+                  <div className="term-command"><span>ops@lesson:~$</span> {entry.command}</div>
+                  <pre>{entry.output}</pre>
                 </div>
-              )}
+              ))}
               <div className="prompt">
                 <span>ops@lesson:~$</span>
                 <input
@@ -1801,13 +1861,15 @@ function CourseLessonReader({
             <span>
               {done
                 ? "Progress saved · +40 XP"
-                : "Finish the check, then mark this lesson complete."}
+                : validated
+                  ? "Sandbox passed. Finish the knowledge check to continue."
+                  : "Complete the sandbox in order, then pass the knowledge check."}
             </span>
           </div>
           <button
             className="primary"
             onClick={complete}
-            disabled={done || quiz !== lesson.assessment.correct}
+            disabled={done || !validated || quiz !== lesson.assessment.correct}
           >
             {done ? (
               <>
