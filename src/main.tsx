@@ -38,7 +38,7 @@ import {
 } from "./catalog";
 import "./styles.css";
 
-type Page = "home" | "catalog" | "track" | "lesson" | "architecture" | "design";
+type Page = "home" | "catalog" | "track" | "lesson" | "interview" | "architecture" | "design";
 type CourseProgress = Record<string, number[]>;
 
 const readCourseProgress = (): CourseProgress => {
@@ -154,8 +154,10 @@ function App() {
     initialParts[2] === "lessons" ? Number(initialParts[3]?.split("-")[0]) : 0;
   const initialPage: Page = initialTrack
     ? "track"
-    : window.location.pathname === "/tracks"
+      : window.location.pathname === "/tracks"
       ? "catalog"
+      : window.location.pathname === "/interview"
+        ? "interview"
       : window.location.pathname.startsWith("/flagship")
         ? "lesson"
         : window.location.pathname === "/sitemap"
@@ -211,7 +213,17 @@ function App() {
         setPage("track");
       } else {
         setSelectedLesson(0);
-        setPage("home");
+        setPage(
+          window.location.pathname === "/tracks"
+            ? "catalog"
+            : window.location.pathname === "/interview"
+              ? "interview"
+              : window.location.pathname === "/sitemap"
+                ? "architecture"
+                : window.location.pathname === "/design-system"
+                  ? "design"
+                  : "home",
+        );
       }
     };
     addEventListener("popstate", onPopState);
@@ -223,6 +235,7 @@ function App() {
       const routes: Partial<Record<Page, string>> = {
         home: "/",
         catalog: "/tracks",
+        interview: "/interview",
         lesson: "/flagship/kubernetes-crashloopbackoff",
         architecture: "/sitemap",
         design: "/design-system",
@@ -277,6 +290,7 @@ function App() {
             />
           )}{" "}
           {page === "lesson" && <Lesson setXp={setXp} />}{" "}
+          {page === "interview" && <InterviewBank openLesson={openLesson} />}{" "}
           {page === "architecture" && <Architecture />}{" "}
           {page === "design" && <DesignSystem />}
         </motion.main>
@@ -336,6 +350,12 @@ function Nav({
           onClick={() => go("lesson")}
         >
           Flagship lab
+        </button>
+        <button
+          className={page === "interview" ? "on" : ""}
+          onClick={() => go("interview")}
+        >
+          Interview bank
         </button>
         <button
           className={page === "architecture" ? "on" : ""}
@@ -1990,6 +2010,160 @@ function CourseLessonReader({
           </button>
         </nav>
       </article>
+    </div>
+  );
+}
+
+type InterviewQuestionSpec = {
+  id: string;
+  track: Track;
+  difficulty: "Easy" | "Medium" | "Hard";
+  company: string;
+  title: string;
+  scenario: string;
+  reasoning: string;
+  spokenAnswer: string;
+  commands: string[];
+};
+
+function interviewQuestionsFor(track: Track): InterviewQuestionSpec[] {
+  const companies = ["Amazon", "Google", "Microsoft", "Netflix", "Atlassian"];
+  const company = (offset: number) =>
+    companies[(tracks.findIndex((item) => item.slug === track.slug) + offset) % companies.length];
+  return [
+    {
+      id: `${track.slug}-foundation`,
+      track,
+      difficulty: "Easy",
+      company: company(0),
+      title: `Explain the ${track.name} production path`,
+      scenario: `A new service depends on ${track.name}. The interviewer asks you to trace ${track.concept.join(" → ")} and identify the signal that proves success.`,
+      reasoning: `Define the system boundary first, then trace input, control decision, state transition, and observable outcome. Avoid listing features without connecting them to production ownership.`,
+      spokenAnswer: `${track.name} owns the path from ${track.concept[0]} to ${track.concept[3]}. I verify each transition, establish a baseline with ${track.command}, and use the final observable outcome as the contract for success.`,
+      commands: [track.command],
+    },
+    {
+      id: `${track.slug}-incident`,
+      track,
+      difficulty: "Medium",
+      company: company(1),
+      title: `Diagnose the ${track.name} failure`,
+      scenario: track.scenario,
+      reasoning: `Preserve the failure state, separate the visible symptom from root cause, and choose the next observation only if its possible outputs change the decision tree.`,
+      spokenAnswer: track.interview,
+      commands: [track.command, track.fix, track.validator],
+    },
+    {
+      id: `${track.slug}-design`,
+      track,
+      difficulty: "Hard",
+      company: company(2),
+      title: `Harden and automate ${track.name}`,
+      scenario: `The immediate ${track.name} incident is recovered, but the same failure could recur at twice the traffic. Design a least-privilege, observable, reversible recovery workflow.`,
+      reasoning: `Cover saturation, dependency limits, identity and resource scope, preconditions, idempotence, rollback, and both control-plane and user-visible validation.`,
+      spokenAnswer: `I would encode the known-good contract, capture evidence before mutation, gate ${track.fix} behind scoped preconditions, validate with ${track.validator}, and rollback automatically when the user-facing SLO does not recover.`,
+      commands: [track.command, track.fix, track.validator],
+    },
+  ];
+}
+
+function InterviewBank({
+  openLesson,
+}: {
+  openLesson: (track: Track, lesson: LessonSpec) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("All categories");
+  const [difficulty, setDifficulty] = useState("All difficulties");
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const questions = useMemo(
+    () => tracks.flatMap((track) => interviewQuestionsFor(track)),
+    [],
+  );
+  const filtered = questions.filter((question) => {
+    const searchable = `${question.track.name} ${question.title} ${question.scenario} ${question.company}`.toLowerCase();
+    return (
+      searchable.includes(query.toLowerCase()) &&
+      (category === "All categories" || question.track.category === category) &&
+      (difficulty === "All difficulties" || question.difficulty === difficulty)
+    );
+  });
+  const toggle = (id: string) =>
+    setRevealed((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  return (
+    <div className="interview-page">
+      <section className="interview-hero">
+        <div>
+          <span className="kicker">REAL INCIDENT QUESTIONS · HANDS-ON PROOF</span>
+          <h1>Interview question bank</h1>
+          <p>
+            Practice production reasoning across every OpsQuest technology. Reveal the model only after committing to an answer, then prove it in the sandbox.
+          </p>
+        </div>
+        <div className="interview-stats">
+          <span><b>{questions.length}</b> QUESTIONS</span>
+          <span><b>{tracks.length}</b> TECHNOLOGIES</span>
+          <span><b>{new Set(questions.map((item) => item.company)).size}</b> COMPANIES</span>
+        </div>
+      </section>
+      <section className="interview-filters">
+        <label>
+          <Search size={15} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search technology, incident, or company…" />
+        </label>
+        <select value={category} onChange={(event) => setCategory(event.target.value)}>
+          <option>All categories</option>
+          {categories.map((item) => <option key={item}>{item}</option>)}
+        </select>
+        <select value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
+          <option>All difficulties</option>
+          <option>Easy</option>
+          <option>Medium</option>
+          <option>Hard</option>
+        </select>
+        <b>{filtered.length} results</b>
+      </section>
+      <section className="interview-list">
+        {filtered.map((question) => {
+          const isOpen = revealed.has(question.id);
+          return (
+            <article key={question.id} className="interview-question-card">
+              <div className="question-card-top">
+                <span className={`difficulty-${question.difficulty.toLowerCase()}`}>{question.difficulty}</span>
+                <span>{question.company}</span>
+                <span style={{ color: question.track.color }}>{question.track.icon} {question.track.name}</span>
+                <em>{question.track.category}</em>
+              </div>
+              <h2>{question.title}</h2>
+              <p>{question.scenario}</p>
+              <div className="question-actions">
+                <button onClick={() => toggle(question.id)}>{isOpen ? "Hide solution" : "Reveal solution"}</button>
+                <button
+                  className="primary"
+                  onClick={() => openLesson(question.track, lessonsFor(question.track)[11])}
+                >
+                  Solve in environment <ArrowRight size={14} />
+                </button>
+              </div>
+              {isOpen && (
+                <div className="revealed-solution">
+                  <div><b>Reasoning</b><p>{question.reasoning}</p></div>
+                  <div><b>60-second spoken answer</b><p>“{question.spokenAnswer}”</p></div>
+                  <div>
+                    <b>Hands-on proof</b>
+                    {question.commands.map((command) => <code key={command}>$ {command}</code>)}
+                  </div>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </section>
     </div>
   );
 }
