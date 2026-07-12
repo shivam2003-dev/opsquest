@@ -18,6 +18,16 @@ export type Track = {
   concept: [string, string, string, string];
   interview: string;
 };
+export type LessonSpec = {
+  id: number;
+  slug: string;
+  title: string;
+  tier: Tier;
+  minutes: number;
+  kind: "lesson" | "playground" | "quiz" | "challenge";
+  objective: string;
+  summary: string;
+};
 const row = (
   name: string,
   category: Category,
@@ -798,3 +808,153 @@ export const tierMeta: Record<
     xp: 300,
   },
 };
+
+const lessonBlueprints: Array<Omit<LessonSpec, "tier">> = [
+  {
+    id: 1,
+    slug: "production-orientation",
+    title: "Production orientation",
+    minutes: 7,
+    kind: "lesson",
+    objective:
+      "Identify the job this technology performs in a production system.",
+    summary:
+      "Start from a real service request and map the technology's responsibility, boundary, and first operational signal.",
+  },
+  {
+    id: 2,
+    slug: "architecture-and-control-flow",
+    title: "Architecture and control flow",
+    minutes: 8,
+    kind: "lesson",
+    objective: "Trace a request or event through the core components.",
+    summary:
+      "Use an interactive system diagram to connect inputs, control decisions, state, and observable outputs.",
+  },
+  {
+    id: 3,
+    slug: "first-working-operation",
+    title: "First working operation",
+    minutes: 8,
+    kind: "playground",
+    objective:
+      "Run the essential command and interpret every field of its output.",
+    summary:
+      "Work in the embedded playground with a known-good environment before diagnosing a failure.",
+  },
+  {
+    id: 4,
+    slug: "observe-the-baseline",
+    title: "Observe the baseline",
+    minutes: 7,
+    kind: "lesson",
+    objective: "Collect evidence without changing production state.",
+    summary:
+      "Build a baseline from status, events, logs, metrics, and configuration so later changes are measurable.",
+  },
+  {
+    id: 5,
+    slug: "read-the-failure-signal",
+    title: "Read the failure signal",
+    minutes: 8,
+    kind: "quiz",
+    objective: "Distinguish symptoms, platform states, and root causes.",
+    summary:
+      "Classify realistic output and choose the next diagnostic with the smallest cost and blast radius.",
+  },
+  {
+    id: 6,
+    slug: "repair-the-incident",
+    title: "Repair the incident",
+    minutes: 10,
+    kind: "challenge",
+    objective: "Apply the smallest reversible repair supported by evidence.",
+    summary:
+      "Resolve the track's flagship production incident and pass automated state validation.",
+  },
+  {
+    id: 7,
+    slug: "prove-recovery",
+    title: "Prove recovery",
+    minutes: 7,
+    kind: "playground",
+    objective: "Validate system state and the user-visible outcome.",
+    summary:
+      "Run a technical validator, confirm health signals, and rule out a partial or cosmetic recovery.",
+  },
+  {
+    id: 8,
+    slug: "scale-and-performance",
+    title: "Scale and performance",
+    minutes: 9,
+    kind: "lesson",
+    objective: "Reason about capacity, bottlenecks, and safe scaling limits.",
+    summary:
+      "Follow the saturation path and choose a scaling response that preserves correctness and cost control.",
+  },
+  {
+    id: 9,
+    slug: "security-and-blast-radius",
+    title: "Security and blast radius",
+    minutes: 8,
+    kind: "challenge",
+    objective: "Apply least privilege and contain operational risk.",
+    summary:
+      "Harden the working solution without breaking its runtime contract or expanding permissions unnecessarily.",
+  },
+  {
+    id: 10,
+    slug: "automate-the-runbook",
+    title: "Automate the runbook",
+    minutes: 8,
+    kind: "playground",
+    objective:
+      "Turn the manual recovery into a repeatable, reviewable workflow.",
+    summary:
+      "Encode diagnostics, guardrails, rollout, and validation so the same incident is faster and safer next time.",
+  },
+  {
+    id: 11,
+    slug: "boss-incident",
+    title: "Boss incident: restore production",
+    minutes: 10,
+    kind: "challenge",
+    objective: "Diagnose and recover under a timed multi-signal incident.",
+    summary:
+      "Combine architecture, evidence, repair, security, and validation in one no-hints production simulation.",
+  },
+  {
+    id: 12,
+    slug: "interview-ready",
+    title: "Interview-ready explanation",
+    minutes: 6,
+    kind: "quiz",
+    objective: "Explain the diagnosis and trade-offs in 60–90 seconds.",
+    summary:
+      "Practice the model answer, follow-up questions, common traps, and a final hands-on verification.",
+  },
+];
+
+export const lessonsFor = (track: Track): LessonSpec[] =>
+  lessonBlueprints.map((lesson) => ({
+    ...lesson,
+    tier:
+      lesson.id <= 3
+        ? "Beginner"
+        : lesson.id <= 6
+          ? "Intermediate"
+          : lesson.id <= 9
+            ? "Advanced"
+            : "Interview-Ready",
+    title:
+      lesson.id === 6
+        ? `Repair the ${track.name} incident`
+        : lesson.id === 11
+          ? `${track.name} boss incident`
+          : lesson.title,
+    summary:
+      `${lesson.summary} ${lesson.id === 1 ? track.scenario : ""}`.trim(),
+  }));
+
+export const courseMinutes = (track: Track) =>
+  lessonsFor(track).reduce((total, lesson) => total + lesson.minutes, 0);

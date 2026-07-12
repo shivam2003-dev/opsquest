@@ -25,9 +25,12 @@ import {
 } from "lucide-react";
 import {
   categories,
+  courseMinutes,
+  lessonsFor,
   tierMeta,
   tiers,
   tracks,
+  type LessonSpec,
   type Tier,
   type Track,
 } from "./catalog";
@@ -121,14 +124,33 @@ const commandMap: Record<string, string> = {
 };
 
 function App() {
-  const [page, setPage] = useState<Page>("home");
+  const initialParts = window.location.pathname.split("/").filter(Boolean);
+  const initialTrack =
+    initialParts[0] === "tracks"
+      ? tracks.find((track) => track.slug === initialParts[1])
+      : undefined;
+  const initialLesson =
+    initialParts[2] === "lessons" ? Number(initialParts[3]?.split("-")[0]) : 0;
+  const initialPage: Page = initialTrack
+    ? "track"
+    : window.location.pathname === "/tracks"
+      ? "catalog"
+      : window.location.pathname.startsWith("/flagship")
+        ? "lesson"
+        : window.location.pathname === "/sitemap"
+          ? "architecture"
+          : window.location.pathname === "/design-system"
+            ? "design"
+            : "home";
+  const [page, setPage] = useState<Page>(initialPage);
   const [dark, setDark] = useState(true);
   const [search, setSearch] = useState(false);
   const [xp, setXp] = useState(1280);
   const [streak] = useState(7);
   const [selectedTrack, setSelectedTrack] = useState<Track>(
-    tracks.find((track) => track.name === "Kubernetes")!,
+    initialTrack || tracks.find((track) => track.name === "Kubernetes")!,
   );
+  const [selectedLesson, setSelectedLesson] = useState(initialLesson || 0);
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
   }, [dark]);
@@ -147,12 +169,55 @@ function App() {
     addEventListener("keydown", h);
     return () => removeEventListener("keydown", h);
   }, []);
+  useEffect(() => {
+    const onPopState = () => {
+      const parts = window.location.pathname.split("/").filter(Boolean);
+      const track =
+        parts[0] === "tracks"
+          ? tracks.find((item) => item.slug === parts[1])
+          : undefined;
+      if (track) {
+        setSelectedTrack(track);
+        setSelectedLesson(
+          parts[2] === "lessons" ? Number(parts[3]?.split("-")[0]) || 0 : 0,
+        );
+        setPage("track");
+      } else {
+        setSelectedLesson(0);
+        setPage("home");
+      }
+    };
+    addEventListener("popstate", onPopState);
+    return () => removeEventListener("popstate", onPopState);
+  }, []);
   const go = (p: Page) => {
     setPage(p);
+    if (p !== "track") {
+      const routes: Partial<Record<Page, string>> = {
+        home: "/",
+        catalog: "/tracks",
+        lesson: "/flagship/kubernetes-crashloopbackoff",
+        architecture: "/sitemap",
+        design: "/design-system",
+      };
+      history.pushState({}, "", routes[p] || "/");
+    }
     scrollTo({ top: 0, behavior: "smooth" });
   };
   const openTrack = (track: Track) => {
     setSelectedTrack(track);
+    setSelectedLesson(0);
+    history.pushState({}, "", `/tracks/${track.slug}`);
+    go("track");
+  };
+  const openLesson = (track: Track, lesson: LessonSpec) => {
+    setSelectedTrack(track);
+    setSelectedLesson(lesson.id);
+    history.pushState(
+      {},
+      "",
+      `/tracks/${track.slug}/lessons/${lesson.id}-${lesson.slug}`,
+    );
     go("track");
   };
   return (
@@ -177,7 +242,12 @@ function App() {
           {page === "home" && <Home go={go} />}{" "}
           {page === "catalog" && <Catalog openTrack={openTrack} />}{" "}
           {page === "track" && (
-            <TrackPage track={selectedTrack} setXp={setXp} />
+            <TrackPage
+              track={selectedTrack}
+              selectedLesson={selectedLesson}
+              openLesson={openLesson}
+              setXp={setXp}
+            />
           )}{" "}
           {page === "lesson" && <Lesson setXp={setXp} />}{" "}
           {page === "architecture" && <Architecture />}{" "}
@@ -1012,6 +1082,10 @@ function Catalog({ openTrack }: { openTrack: (track: Track) => void }) {
                       </span>
                       <h3>{track.name}</h3>
                       <p>{track.scenario}</p>
+                      <div className="course-size">
+                        <BookOpen size={12} /> 12 lessons <span>·</span>{" "}
+                        {courseMinutes(track)} min
+                      </div>
                       <div className="tier-dots">
                         {tiers.map((tier) => (
                           <span key={tier}>
@@ -1036,11 +1110,19 @@ function Catalog({ openTrack }: { openTrack: (track: Track) => void }) {
 
 function TrackPage({
   track,
+  selectedLesson,
+  openLesson,
   setXp,
 }: {
   track: Track;
+  selectedLesson: number;
+  openLesson: (track: Track, lesson: LessonSpec) => void;
   setXp: React.Dispatch<React.SetStateAction<number>>;
 }) {
+  const courseLessons = lessonsFor(track);
+  const activeLesson = courseLessons.find(
+    (lesson) => lesson.id === selectedLesson,
+  );
   const [tier, setTier] = useState<Tier>("Beginner");
   const [diagramStep, setDiagramStep] = useState(0);
   const [input, setInput] = useState("");
@@ -1079,6 +1161,17 @@ function TrackPage({
       setXp((value) => value + meta.xp);
     }
   };
+  if (activeLesson) {
+    return (
+      <CourseLessonReader
+        track={track}
+        lesson={activeLesson}
+        lessons={courseLessons}
+        openLesson={openLesson}
+        setXp={setXp}
+      />
+    );
+  }
   return (
     <div className="track-page">
       <section
@@ -1092,14 +1185,69 @@ function TrackPage({
           </span>
           <h1>{track.name}</h1>
           <p>
-            Four practical tiers. Every lesson, lab, solution, and interview
-            drill is free.
+            12 practical lessons · {courseMinutes(track)} minutes · four tiers.
+            Every lesson, lab, solution, and interview drill is free.
           </p>
         </div>
         <div className="free-seal">
           <Check />
           <b>100% FREE</b>
           <span>NO LOCKS</span>
+        </div>
+      </section>
+      <section className="course-roadmap">
+        <div className="course-roadmap-head">
+          <div>
+            <span className="kicker">EDUCATIVE-STYLE LEARNING ROADMAP</span>
+            <h2>12 lessons · {courseMinutes(track)} minutes</h2>
+            <p>
+              Read at your pace, run every command, and finish with a timed
+              production incident.
+            </p>
+          </div>
+          <div className="roadmap-metrics">
+            <span>
+              <b>12</b> LESSONS
+            </span>
+            <span>
+              <b>4</b> PLAYGROUNDS
+            </span>
+            <span>
+              <b>3</b> CHALLENGES
+            </span>
+          </div>
+        </div>
+        <div className="lesson-outline">
+          {tiers.map((courseTier) => (
+            <section key={courseTier}>
+              <header>
+                <span>{tiers.indexOf(courseTier) + 1}</span>
+                <div>
+                  <b>{courseTier}</b>
+                  <small>{tierMeta[courseTier].focus}</small>
+                </div>
+                <em>FREE</em>
+              </header>
+              {courseLessons
+                .filter((lesson) => lesson.tier === courseTier)
+                .map((lesson) => (
+                  <button
+                    onClick={() => openLesson(track, lesson)}
+                    key={lesson.id}
+                  >
+                    <span>{lesson.id}</span>
+                    <div>
+                      <b>{lesson.title}</b>
+                      <small>{lesson.summary}</small>
+                    </div>
+                    <em>
+                      {lesson.kind} · {lesson.minutes} min
+                    </em>
+                    <ArrowRight size={14} />
+                  </button>
+                ))}
+            </section>
+          ))}
         </div>
       </section>
       <nav className="tier-nav">
@@ -1353,6 +1501,341 @@ function TrackPage({
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function CourseLessonReader({
+  track,
+  lesson,
+  lessons,
+  openLesson,
+  setXp,
+}: {
+  track: Track;
+  lesson: LessonSpec;
+  lessons: LessonSpec[];
+  openLesson: (track: Track, lesson: LessonSpec) => void;
+  setXp: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  const [step, setStep] = useState(0);
+  const [input, setInput] = useState("");
+  const [output, setOutput] = useState("");
+  const [repaired, setRepaired] = useState(false);
+  const [quiz, setQuiz] = useState<number | null>(null);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    setStep(0);
+    setInput("");
+    setOutput("");
+    setRepaired(false);
+    setQuiz(null);
+    setDone(false);
+  }, [lesson.id, track.slug]);
+  const execute = () => {
+    const value = input.trim();
+    if (value === track.command) setOutput(track.output);
+    else if (value === track.fix) {
+      setOutput(
+        `Applied safely: ${track.fix}\nThe target state changed. Verify the outcome next.`,
+      );
+      setRepaired(true);
+    } else if (value === track.validator)
+      setOutput(
+        repaired
+          ? "PASS — recovery verified and user-visible health restored."
+          : "FAIL — no evidenced repair has been applied.",
+      );
+    else
+      setOutput(
+        `Unknown in this lab. Use one of the exact ${track.name} commands introduced in the lesson.`,
+      );
+    setInput("");
+  };
+  const complete = () => {
+    if (!done) {
+      setDone(true);
+      setXp((value) => value + 40);
+    }
+  };
+  const previous = lessons[lesson.id - 2],
+    next = lessons[lesson.id];
+  return (
+    <div className="course-reader">
+      <aside className="course-sidebar">
+        <div className="course-sidebar-title">
+          <span style={{ color: track.color }}>{track.icon}</span>
+          <div>
+            <small>{track.category}</small>
+            <b>{track.name}</b>
+          </div>
+        </div>
+        <div className="course-progress">
+          <span>Lesson {lesson.id} of 12</span>
+          <b>{Math.round(((lesson.id - 1) / 12) * 100)}%</b>
+          <i>
+            <em style={{ width: `${((lesson.id - 1) / 12) * 100}%` }} />
+          </i>
+        </div>
+        {tiers.map((courseTier) => (
+          <section key={courseTier}>
+            <h4>{courseTier}</h4>
+            {lessons
+              .filter((item) => item.tier === courseTier)
+              .map((item) => (
+                <button
+                  className={item.id === lesson.id ? "on" : ""}
+                  onClick={() => openLesson(track, item)}
+                  key={item.id}
+                >
+                  <span>
+                    {item.id < lesson.id ? <Check size={11} /> : item.id}
+                  </span>
+                  <div>
+                    <b>{item.title}</b>
+                    <small>
+                      {item.minutes} min · {item.kind}
+                    </small>
+                  </div>
+                </button>
+              ))}
+          </section>
+        ))}
+      </aside>
+      <article className="course-lesson">
+        <div className="reader-top">
+          <span>{lesson.tier}</span>
+          <span>{lesson.kind.toUpperCase()}</span>
+          <span>{lesson.minutes} MIN</span>
+          <span>LESSON {lesson.id} OF 12</span>
+        </div>
+        <h1>{lesson.title}</h1>
+        <p className="reader-lede">{lesson.summary}</p>
+        <div className="learning-objective">
+          <Award />
+          <div>
+            <b>Learning objective</b>
+            <p>{lesson.objective}</p>
+          </div>
+        </div>
+        <section>
+          <span className="kicker">PRODUCTION CONTEXT</span>
+          <h2>Start from the incident, not the definition</h2>
+          <p>
+            {track.scenario} In this lesson, you are the engineer responsible
+            for collecting evidence, limiting blast radius, and proving that the
+            user-facing service actually recovered.
+          </p>
+          <p>
+            <b>{track.name}</b> sits on the path from <b>{track.concept[0]}</b>{" "}
+            to <b>{track.concept[3]}</b>. A useful mental model connects what
+            entered the system, which control decision was made, where state
+            changed, and which signal proves the outcome.
+          </p>
+          <div className="why-box">
+            <b>Why this matters</b>
+            <p>
+              Production debugging is a decision sequence. Each command should
+              reduce uncertainty. If a command cannot change your next decision,
+              it is noise—not diagnosis.
+            </p>
+          </div>
+        </section>
+        <section>
+          <span className="kicker">INTERACTIVE ILLUSTRATION</span>
+          <h2>Trace the control flow</h2>
+          <div className="reader-diagram">
+            <div>
+              {track.concept.map((item, index) => (
+                <React.Fragment key={item}>
+                  <button
+                    className={
+                      index === step ? "hot" : index < step ? "past" : ""
+                    }
+                    onClick={() => setStep(index)}
+                  >
+                    <span>{index + 1}</span>
+                    <b>{item}</b>
+                  </button>
+                  {index < 3 && <i />}
+                </React.Fragment>
+              ))}
+            </div>
+            <p>
+              {step === 0
+                ? "The workload enters through the system boundary. Capture identity, scope, and timestamp before changing anything."
+                : step === 1
+                  ? "The control plane evaluates configuration and current state. This is where a mismatch becomes observable."
+                  : step === 2
+                    ? "A narrow repair updates the responsible control point. Reversible changes protect the recovery path."
+                    : "The final signal must prove both platform health and the original user outcome."}
+            </p>
+          </div>
+        </section>
+        <section>
+          <span className="kicker">EXACT COMMAND + ANNOTATED OUTPUT</span>
+          <h2>Collect evidence first</h2>
+          <Command
+            cmd={track.command}
+            output={track.output}
+            why={`It interrogates the ${track.name} control point directly and preserves a before-state for validation.`}
+          />
+          <div className="annotation-grid">
+            <div>
+              <span>01</span>
+              <p>
+                <b>Scope:</b> confirm that the command targets the affected
+                environment and object.
+              </p>
+            </div>
+            <div>
+              <span>02</span>
+              <p>
+                <b>State:</b> read the explicit status before inferring a root
+                cause.
+              </p>
+            </div>
+            <div>
+              <span>03</span>
+              <p>
+                <b>Delta:</b> compare the output with the known-good contract.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section>
+          <span className="kicker">EMBEDDED PLAYGROUND</span>
+          <h2>Practice without local setup</h2>
+          <p>
+            Run the diagnostic, apply the repair, and then type the validator.
+            The engine preserves state between commands so a validator cannot
+            pass before the repair.
+          </p>
+          <div className="terminal">
+            <div className="terminal-bar">
+              <span>
+                <i />
+                <i />
+                <i />
+              </span>
+              <b>
+                {track.slug} / lesson-{lesson.id}
+              </b>
+              <em>FREE SANDBOX</em>
+            </div>
+            <div className="terminal-body">
+              {output && (
+                <div className="term-entry">
+                  <pre>{output}</pre>
+                </div>
+              )}
+              <div className="prompt">
+                <span>ops@lesson:~$</span>
+                <input
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  onKeyDown={(event) => event.key === "Enter" && execute()}
+                  placeholder="type a lesson command…"
+                />
+                <button onClick={execute}>Run</button>
+              </div>
+            </div>
+          </div>
+          <div className="command-hints">
+            <button onClick={() => setInput(track.command)}>Diagnostic</button>
+            <button onClick={() => setInput(track.fix)}>Repair</button>
+            <button onClick={() => setInput(track.validator)}>Validator</button>
+          </div>
+        </section>
+        <section>
+          <span className="kicker">KNOWLEDGE CHECK</span>
+          <h2>What should happen next?</h2>
+          <p>
+            You have the failure output but have not changed production. Which
+            action best preserves evidence and limits blast radius?
+          </p>
+          <div className="quiz-options">
+            {[
+              "Restart everything immediately",
+              "Apply the smallest repair supported by the output",
+              "Increase all limits before investigating",
+            ].map((answer, index) => (
+              <button
+                className={
+                  quiz === index ? (index === 1 ? "correct" : "wrong") : ""
+                }
+                onClick={() => setQuiz(index)}
+                key={answer}
+              >
+                <span>{String.fromCharCode(65 + index)}</span>
+                {answer}
+                {quiz === index && (index === 1 ? <Check /> : <X />)}
+              </button>
+            ))}
+          </div>
+          {quiz !== null && (
+            <div
+              className={quiz === 1 ? "quiz-feedback good" : "quiz-feedback"}
+            >
+              {quiz === 1
+                ? "Correct. The evidence supports a narrow, reversible change followed by explicit validation."
+                : "Not quite. This action destroys evidence or expands risk before the root cause is proven."}
+            </div>
+          )}
+        </section>
+        <section>
+          <span className="kicker">INTERVIEW TRANSFER</span>
+          <h2>Say it like a production engineer</h2>
+          <blockquote>“{track.interview}”</blockquote>
+          <div className="why-box">
+            <b>The interviewer’s trap</b>
+            <p>
+              They are checking whether you confuse a visible platform state
+              with root cause, make changes before gathering evidence, or stop
+              after a command succeeds without validating the user outcome.
+            </p>
+          </div>
+        </section>
+        <div className="lesson-complete">
+          <div>
+            <b>{done ? "Lesson complete" : "Ready to continue?"}</b>
+            <span>
+              {done
+                ? "Progress saved · +40 XP"
+                : "Finish the check, then mark this lesson complete."}
+            </span>
+          </div>
+          <button
+            className="primary"
+            onClick={complete}
+            disabled={done || quiz !== 1}
+          >
+            {done ? (
+              <>
+                <Check /> Completed
+              </>
+            ) : (
+              <>
+                Complete lesson <ArrowRight />
+              </>
+            )}
+          </button>
+        </div>
+        <nav className="reader-nav">
+          <button
+            disabled={!previous}
+            onClick={() => previous && openLesson(track, previous)}
+          >
+            ← {previous?.title || "Course start"}
+          </button>
+          <button
+            disabled={!next}
+            onClick={() => next && openLesson(track, next)}
+          >
+            {next?.title || "Course complete"} →
+          </button>
+        </nav>
+      </article>
     </div>
   );
 }
