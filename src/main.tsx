@@ -1750,36 +1750,38 @@ function CourseLessonReader({
         <section>
           <span className="kicker">KNOWLEDGE CHECK</span>
           <h2>What should happen next?</h2>
-          <p>
-            You have the failure output but have not changed production. Which
-            action best preserves evidence and limits blast radius?
-          </p>
+          <p>{lesson.assessment.question}</p>
           <div className="quiz-options">
-            {[
-              "Restart everything immediately",
-              "Apply the smallest repair supported by the output",
-              "Increase all limits before investigating",
-            ].map((answer, index) => (
+            {lesson.assessment.options.map((answer, index) => (
               <button
                 className={
-                  quiz === index ? (index === 1 ? "correct" : "wrong") : ""
+                  quiz === index
+                    ? index === lesson.assessment.correct
+                      ? "correct"
+                      : "wrong"
+                    : ""
                 }
                 onClick={() => setQuiz(index)}
                 key={answer}
               >
                 <span>{String.fromCharCode(65 + index)}</span>
                 {answer}
-                {quiz === index && (index === 1 ? <Check /> : <X />)}
+                {quiz === index &&
+                  (index === lesson.assessment.correct ? <Check /> : <X />)}
               </button>
             ))}
           </div>
           {quiz !== null && (
             <div
-              className={quiz === 1 ? "quiz-feedback good" : "quiz-feedback"}
+              className={
+                quiz === lesson.assessment.correct
+                  ? "quiz-feedback good"
+                  : "quiz-feedback"
+              }
             >
-              {quiz === 1
-                ? "Correct. The evidence supports a narrow, reversible change followed by explicit validation."
-                : "Not quite. This action destroys evidence or expands risk before the root cause is proven."}
+              {quiz === lesson.assessment.correct
+                ? lesson.assessment.explanation
+                : `Not quite. ${lesson.assessment.explanation}`}
             </div>
           )}
         </section>
@@ -1805,7 +1807,7 @@ function CourseLessonReader({
           <button
             className="primary"
             onClick={complete}
-            disabled={done || quiz !== 1}
+            disabled={done || quiz !== lesson.assessment.correct}
           >
             {done ? (
               <>

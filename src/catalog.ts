@@ -40,6 +40,12 @@ export type LessonSpec = {
   interviewQuestion: string;
   interviewTrap: string;
   diagramNarration: [string, string, string, string];
+  assessment: {
+    question: string;
+    options: [string, string, string];
+    correct: number;
+    explanation: string;
+  };
 };
 const row = (
   name: string,
@@ -1095,8 +1101,98 @@ const lessonDepth = (track: Track, lesson: (typeof lessonBlueprints)[number]) =>
       `${track.concept[2]} is where the evidenced repair changes system state.`,
       `${track.concept[3]} must prove platform health and the original user outcome.`,
     ] as [string, string, string, string],
+    assessment: ([
+      {
+        question: `Which statement best defines ${track.name}'s responsibility in this production path?`,
+        options: [`It owns the boundary from ${track.concept[0]} through ${track.concept[3]}`, "It replaces every upstream and downstream dependency", "It guarantees user outcomes without observability"],
+        correct: 0,
+        explanation: `Correct: ${track.name} owns a specific control boundary. Production reasoning starts by naming that boundary and its observable outcome.`,
+      },
+      {
+        question: `Where should you look first when ${track.concept[3]} is unhealthy?`,
+        options: ["Restart every component", `Trace backward through ${track.concept.join(" → ")}`, "Increase capacity before collecting evidence"],
+        correct: 1,
+        explanation: "Correct: trace backward from the failed outcome and find the first contract that diverges from expected state.",
+      },
+      {
+        question: `What must you do immediately after running ${track.command}?`,
+        options: ["Apply every plausible fix", "Discard the output after reading it", "Interpret and preserve the failing field as baseline evidence"],
+        correct: 2,
+        explanation: "Correct: a command is useful only when its output changes the decision tree and is preserved for comparison after repair.",
+      },
+      {
+        question: `Which baseline is strongest for this ${track.name} incident?`,
+        options: ["A timestamped diagnostic plus scope, configuration, and user impact", "A teammate's memory of yesterday", "A successful mutation command"],
+        correct: 0,
+        explanation: "Correct: a trustworthy baseline combines scoped technical evidence with the original user-visible symptom.",
+      },
+      {
+        question: `What does the supplied ${track.name} output represent before deeper investigation?`,
+        options: ["Guaranteed root cause", "Evidence that narrows the failing contract", "Proof that all dependencies are healthy"],
+        correct: 1,
+        explanation: "Correct: platform output narrows the search, but you must still separate symptom, state, and causal mechanism.",
+      },
+      {
+        question: `Why is ${track.fix} the preferred repair in this lab?`,
+        options: ["It changes the most resources", "It avoids the need for validation", "It is the narrowest mutation supported by the evidence"],
+        correct: 2,
+        explanation: "Correct: a narrow, reversible mutation limits blast radius and preserves confidence about what restored service.",
+      },
+      {
+        question: `What does a passing ${track.validator} prove?`,
+        options: ["The explicit recovery condition is now true", "No future incident can occur", "Every user workflow is automatically covered"],
+        correct: 0,
+        explanation: "Correct: the validator proves its stated contract; pair it with a user-level smoke check for full recovery evidence.",
+      },
+      {
+        question: `When is scaling ${track.name} a defensible response?`,
+        options: ["Whenever latency rises", "After identifying the constrained resource and defining an SLO and rollback threshold", "Before checking shared dependencies"],
+        correct: 1,
+        explanation: "Correct: scaling follows bottleneck identification and must be evaluated against both saturation and user-facing outcomes.",
+      },
+      {
+        question: `Which hardening change best follows least privilege?`,
+        options: ["Disable all access", "Grant administrator access temporarily forever", "Narrow identity, action, resource, path, and time while retesting the workflow"],
+        correct: 2,
+        explanation: "Correct: least privilege is multidimensional and must preserve the required operational contract.",
+      },
+      {
+        question: `What makes the ${track.name} recovery automation safe?`,
+        options: ["Preconditions, evidence capture, guarded repair, validation, and rollback", "Running the mutation on a timer", "Suppressing errors to keep the pipeline green"],
+        correct: 0,
+        explanation: "Correct: operational automation encodes the whole decision path, not just the state-changing command.",
+      },
+      {
+        question: "During the boss incident, what is the best first move?",
+        options: ["Try the fastest remembered fix", "State impact and scope, preserve evidence, then follow the highest-information branch", "Wait for every stakeholder before diagnosing"],
+        correct: 1,
+        explanation: "Correct: incident leadership starts with impact and scope, then pursues the shortest evidence-backed path to recovery.",
+      },
+      {
+        question: `Which structure produces the strongest ${track.name} interview answer?`,
+        options: ["A list of product features", "A definition copied from documentation", "Situation, evidence, decision, result, prevention, and hands-on proof"],
+        correct: 2,
+        explanation: "Correct: this structure demonstrates operational judgment, causal reasoning, verification, and learning.",
+      },
+    ][lesson.id - 1]) as LessonSpec["assessment"],
   };
 };
+
+const curriculumTitle = (track: Track, lessonId: number) =>
+  [
+    `${track.name} in production`,
+    `${track.concept[0]} to ${track.concept[3]}`,
+    `Operate ${track.concept[1]}`,
+    `Baseline ${track.concept[3]}`,
+    `Diagnose: ${track.scenario.split(".")[0]}`,
+    `Repair the ${track.name} incident`,
+    `Prove ${track.concept[3]}`,
+    `Scale ${track.name} safely`,
+    `Harden ${track.name}`,
+    `Automate the ${track.name} runbook`,
+    `${track.name} boss incident`,
+    `${track.name} interview gauntlet`,
+  ][lessonId - 1];
 
 export const lessonsFor = (track: Track): LessonSpec[] =>
   lessonBlueprints.map((lesson) => ({
@@ -1110,12 +1206,7 @@ export const lessonsFor = (track: Track): LessonSpec[] =>
           : lesson.id <= 9
             ? "Advanced"
             : "Interview-Ready",
-    title:
-      lesson.id === 6
-        ? `Repair the ${track.name} incident`
-        : lesson.id === 11
-          ? `${track.name} boss incident`
-          : lesson.title,
+    title: curriculumTitle(track, lesson.id),
     summary:
       `${lesson.summary} ${lesson.id === 1 ? track.scenario : ""}`.trim(),
   }));
