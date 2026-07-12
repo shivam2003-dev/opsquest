@@ -1651,6 +1651,10 @@ on_failure:
   const [runbookChecks, setRunbookChecks] = useState<
     { label: string; pass: boolean }[] | null
   >(null);
+  const [bossStarted, setBossStarted] = useState(false);
+  const [bossSeconds, setBossSeconds] = useState(15 * 60);
+  const [bossUpdate, setBossUpdate] = useState("");
+  const [bossCommsChecked, setBossCommsChecked] = useState(false);
   const done = completedLessons.includes(lesson.id);
   useEffect(() => {
     setStep(0);
@@ -1670,7 +1674,19 @@ on_failure:
     const nextRunbookKey = `opsquest-runbook:${track.slug}`;
     setRunbook(localStorage.getItem(nextRunbookKey) || defaultRunbook);
     setRunbookChecks(null);
+    setBossStarted(false);
+    setBossSeconds(15 * 60);
+    setBossUpdate("");
+    setBossCommsChecked(false);
   }, [lesson.id, track.slug]);
+  useEffect(() => {
+    if (lesson.id !== 11 || !bossStarted || bossSeconds <= 0) return;
+    const timer = window.setInterval(
+      () => setBossSeconds((value) => Math.max(0, value - 1)),
+      1000,
+    );
+    return () => window.clearInterval(timer);
+  }, [lesson.id, bossStarted, bossSeconds]);
   const toggleBookmark = () => {
     const bookmarks = JSON.parse(localStorage.getItem("opsquest-bookmarks-v1") || "[]") as string[];
     const next = bookmarked
@@ -1702,6 +1718,15 @@ on_failure:
     ]);
   };
   const runbookPassed = runbookChecks?.every((check) => check.pass) ?? false;
+  const bossCommsPassed =
+    bossCommsChecked &&
+    bossUpdate.trim().length >= 120 &&
+    /impact/i.test(bossUpdate) &&
+    /cause/i.test(bossUpdate) &&
+    /recover/i.test(bossUpdate);
+  const bossPassed =
+    lesson.id !== 11 ||
+    (bossStarted && bossSeconds > 0 && observed && repaired && validated && bossCommsPassed);
   const execute = () => {
     const value = input.trim();
     if (!value) return;
@@ -1949,6 +1974,71 @@ on_failure:
             )}
           </section>
         )}
+        {lesson.id === 11 && (
+          <section>
+            <span className="kicker">WEEKLY BOSS INCIDENT · NO HINTS</span>
+            <h2>Restore production under pressure</h2>
+            <p>
+              {track.scenario} Acknowledge the incident to start the clock, complete the real sandbox sequence, and publish a concise incident-commander update before time expires.
+            </p>
+            <div className={`boss-console ${bossStarted ? "started" : ""} ${bossPassed ? "passed" : ""}`}>
+              <header>
+                <div>
+                  <Flame size={18} />
+                  <span><b>{track.name} SEV-1</b><small>Customer impact active · owner: you</small></span>
+                </div>
+                <div className={`boss-clock ${bossSeconds < 180 ? "urgent" : ""}`}>
+                  <Clock size={16} />
+                  {String(Math.floor(bossSeconds / 60)).padStart(2, "0")}:{String(bossSeconds % 60).padStart(2, "0")}
+                </div>
+              </header>
+              {!bossStarted ? (
+                <div className="boss-start">
+                  <b>The clock starts when you acknowledge.</b>
+                  <p>No solution reveal is available during the incident. Your terminal actions drive the stage gates below.</p>
+                  <button className="primary" onClick={() => setBossStarted(true)}>Acknowledge and start incident <ArrowRight size={14} /></button>
+                </div>
+              ) : (
+                <>
+                  <div className="boss-stages">
+                    {[
+                      { label: "Incident acknowledged", pass: bossStarted },
+                      { label: "Failure evidence captured", pass: observed },
+                      { label: "Evidenced repair applied", pass: repaired },
+                      { label: "Recovery validator passed", pass: validated },
+                      { label: "Commander update accepted", pass: bossCommsPassed },
+                    ].map((stage, index) => (
+                      <div className={stage.pass ? "complete" : ""} key={stage.label}>
+                        <span>{stage.pass ? <Check size={14} /> : index + 1}</span>
+                        <b>{stage.label}</b>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="boss-comms">
+                    <label>Incident commander update</label>
+                    <textarea
+                      value={bossUpdate}
+                      onChange={(event) => { setBossUpdate(event.target.value); setBossCommsChecked(false); }}
+                      placeholder="Impact: … Cause: … Recovery: … Follow-up: …"
+                      rows={5}
+                    />
+                    <div>
+                      <span>{bossUpdate.length}/120 minimum characters · include Impact, Cause, and Recovery</span>
+                      <button onClick={() => setBossCommsChecked(true)}>Validate update</button>
+                    </div>
+                    {bossCommsChecked && (
+                      <p className={bossCommsPassed ? "accepted" : "rejected"}>
+                        {bossCommsPassed
+                          ? "Accepted — the update communicates impact, cause, and recovery evidence."
+                          : "Needs revision — write at least 120 characters and explicitly cover Impact, Cause, and Recovery."}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+        )}
         <section>
           <span className="kicker">EMBEDDED PLAYGROUND</span>
           <h2>Practice without local setup</h2>
@@ -2085,6 +2175,8 @@ on_failure:
                 ? "Progress saved · +40 XP"
                 : lesson.id === 10 && !runbookPassed
                   ? "Validate the automation runbook, sandbox, and knowledge check."
+                : lesson.id === 11 && !bossPassed
+                  ? "Complete the timed boss incident, commander update, and knowledge check."
                 : validated
                   ? "Sandbox passed. Finish the knowledge check to continue."
                   : "Complete the sandbox in order, then pass the knowledge check."}
@@ -2097,7 +2189,8 @@ on_failure:
               done ||
               !validated ||
               quiz !== lesson.assessment.correct ||
-              (lesson.id === 10 && !runbookPassed)
+              (lesson.id === 10 && !runbookPassed) ||
+              !bossPassed
             }
           >
             {done ? (

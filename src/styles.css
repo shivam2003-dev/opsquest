@@ -430,6 +430,36 @@
 .runbook-results p { display: flex; align-items: center; gap: 7px; color: #9ca0ac; font-size: 9px; }
 .runbook-results p svg { color: #fb7185; }
 .runbook-results.passed p svg { color: #34d399; }
+.boss-console { border: 1px solid #703342; border-radius: 11px; overflow: hidden; background: #120d11; }
+.boss-console.started { border-color: #6b531c; }
+.boss-console.passed { border-color: #27624f; }
+.boss-console > header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: #1a1115; padding: 13px 15px; }
+.boss-console > header > div:first-child { display: flex; align-items: center; gap: 9px; }
+.boss-console > header svg { color: #fb7185; }
+.boss-console > header span b,
+.boss-console > header span small { display: block; }
+.boss-console > header span b { color: #fb9aaa; font: 9px DM Mono; }
+.boss-console > header span small { color: #777b88; font: 7px DM Mono; margin-top: 3px; }
+.boss-clock { display: flex; align-items: center; gap: 7px; color: #fbbf24; font: 15px DM Mono; }
+.boss-clock.urgent { color: #fb7185; animation: pulse 1s infinite; }
+.boss-start { text-align: center; padding: 35px 20px; }
+.boss-start b { font-size: 13px; }
+.boss-start p { color: var(--muted); font-size: 9px; }
+.boss-start button { display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 7px; padding: 10px 13px; font-size: 9px; }
+.boss-stages { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; padding: 15px; }
+.boss-stages > div { border: 1px solid var(--line); border-radius: 7px; padding: 9px; text-align: center; color: #646875; }
+.boss-stages > div.complete { color: #67d7b1; border-color: #27624f; background: #34d39909; }
+.boss-stages span { width: 24px; height: 24px; display: grid; place-items: center; margin: 0 auto 7px; border: 1px solid currentColor; border-radius: 50%; font: 8px DM Mono; }
+.boss-stages b { font-size: 7px; line-height: 1.4; }
+.boss-comms { border-top: 1px solid var(--line); padding: 15px; }
+.boss-comms label { display: block; color: #c8cad2; font-size: 9px; font-weight: 700; margin-bottom: 8px; }
+.boss-comms textarea { width: 100%; resize: vertical; border: 1px solid var(--line); border-radius: 8px; background: #090a0d; color: #d4d7df; padding: 12px; font: 10px/1.7 DM Sans; }
+.boss-comms > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 7px; }
+.boss-comms > div span { color: #777b88; font: 7px DM Mono; }
+.boss-comms button { border: 1px solid var(--line); border-radius: 6px; background: var(--surface2); padding: 8px 10px; font-size: 8px; }
+.boss-comms > p { border-radius: 6px; padding: 9px; font-size: 8px; }
+.boss-comms > p.accepted { color: #67d7b1; background: #34d3990a; }
+.boss-comms > p.rejected { color: #fb9aaa; background: #fb71850a; }
 .takeaway-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1044,6 +1074,10 @@
     width: 100%;
     margin-left: 0;
   }
+  .boss-stages { grid-template-columns: 1fr; }
+  .boss-stages > div { display: flex; align-items: center; gap: 9px; text-align: left; }
+  .boss-stages span { margin: 0; flex: 0 0 auto; }
+  .boss-comms > div { align-items: stretch; flex-direction: column; }
   .interview-page { padding: 45px 18px 90px; }
   .progress-page { padding: 45px 18px 90px; }
   .progress-hero { align-items: flex-start; }
