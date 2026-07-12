@@ -1926,6 +1926,32 @@ on_failure:
           </div>
         </section>
         <section>
+          <span className="kicker">TROUBLESHOOTING DECISION TABLE</span>
+          <h2>Let the signal choose the next branch</h2>
+          <p>
+            Do not memorize one happy-path runbook. Compare the observed signal with these branches and take the next action only when its precondition is true.
+          </p>
+          <div className="decision-table">
+            <header><span>Observed signal</span><span>Interpretation</span><span>Next action</span></header>
+            {lesson.decisionTable.map((row) => (
+              <div key={row.signal}>
+                <p>{row.signal}</p>
+                <p>{row.interpretation}</p>
+                <div><p>{row.nextAction}</p><code>$ {row.command}</code></div>
+              </div>
+            ))}
+          </div>
+          <h3 className="mistakes-title">Common mistakes and safer alternatives</h3>
+          <div className="mistakes-list">
+            {lesson.commonMistakes.map((item, index) => (
+              <article key={item.mistake}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <div><b>{item.mistake}</b><p><strong>Consequence:</strong> {item.consequence}</p><p><strong>Safer:</strong> {item.safer}</p></div>
+              </article>
+            ))}
+          </div>
+        </section>
+        <section>
           <span className="kicker">YOUR TURN · VALIDATED CHALLENGE</span>
           <h2>Complete the production task</h2>
           <p className="scenario-hook">{lesson.challenge}</p>

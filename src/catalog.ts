@@ -46,6 +46,17 @@ export type LessonSpec = {
     correct: number;
     explanation: string;
   };
+  decisionTable: {
+    signal: string;
+    interpretation: string;
+    nextAction: string;
+    command: string;
+  }[];
+  commonMistakes: {
+    mistake: string;
+    consequence: string;
+    safer: string;
+  }[];
 };
 const row = (
   name: string,
@@ -1175,6 +1186,43 @@ const lessonDepth = (track: Track, lesson: (typeof lessonBlueprints)[number]) =>
         explanation: "Correct: this structure demonstrates operational judgment, causal reasoning, verification, and learning.",
       },
     ][lesson.id - 1]) as LessonSpec["assessment"],
+    decisionTable: [
+      {
+        signal: track.output.split("\n").slice(-1)[0],
+        interpretation: `The observed ${track.name} state diverges between ${track.concept[1]} and ${track.concept[2]}; this is the evidence-backed incident branch.`,
+        nextAction: "Preserve this output, confirm its scope and timestamp, then apply only the narrow repair mapped to this failure.",
+        command: track.fix,
+      },
+      {
+        signal: `The diagnostic returns no matching ${track.concept[3]} state`,
+        interpretation: `The target identity, environment, time window, or ${track.concept[0]} input may be wrong; absence of evidence is not proof of health.`,
+        nextAction: "Reconfirm context and object identity before broadening the query or changing production state.",
+        command: track.command,
+      },
+      {
+        signal: "The repair is accepted but the recovery validator still fails",
+        interpretation: `The control request succeeded, but ${track.concept[3]} did not converge; a dependency, rollout, cache, or data-plane path remains unhealthy.`,
+        nextAction: "Stop further mutation, retain the failed validator output, inspect convergence, and use the reviewed rollback path if impact persists.",
+        command: track.validator,
+      },
+    ],
+    commonMistakes: [
+      {
+        mistake: `Treating ${track.scenario.split(".")[0].toLowerCase()} as the root cause`,
+        consequence: "A visible state or symptom can have several causes, so the wrong repair may briefly hide impact while destroying useful evidence.",
+        safer: `Use ${track.command} first and tie the next decision to the returned ${track.name} evidence.`,
+      },
+      {
+        mistake: `Running ${track.fix} before recording the baseline`,
+        consequence: "The mutation changes the evidence surface and prevents a defensible before/after comparison or causal incident review.",
+        safer: "Capture identity, scope, timestamp, output, and rollback authority before changing state.",
+      },
+      {
+        mistake: "Closing the incident when the repair command exits successfully",
+        consequence: `Control-plane acceptance does not prove ${track.concept[3]} or the original user journey recovered.`,
+        safer: `Run ${track.validator}, then verify the user-visible operation and watch the regression signal.`,
+      },
+    ],
   };
 };
 

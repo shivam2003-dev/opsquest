@@ -880,6 +880,25 @@
   line-height: 1.6;
   color: var(--muted);
 }
+.decision-table { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.decision-table > header,
+.decision-table > div { display: grid; grid-template-columns: 0.9fr 1.15fr 1.35fr; }
+.decision-table > header { background: #191a20; }
+.decision-table > header span { color: #888c98; padding: 10px 12px; font: 7px DM Mono; text-transform: uppercase; }
+.decision-table > div + div { border-top: 1px solid var(--line); }
+.decision-table > div > p,
+.decision-table > div > div { padding: 13px; margin: 0; border-right: 1px solid var(--line); }
+.decision-table > div > div { border-right: 0; }
+.decision-table p { color: var(--muted); font-size: 9px; line-height: 1.65; }
+.decision-table > div > p:first-child { color: #d0d2da; }
+.decision-table code { display: block; margin-top: 9px; border-radius: 5px; background: #090a0d; color: #67d7b1; padding: 8px; overflow: auto; font: 8px DM Mono; }
+.mistakes-title { font-size: 15px; margin: 28px 0 10px; }
+.mistakes-list { display: grid; gap: 8px; }
+.mistakes-list article { display: flex; gap: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 13px; }
+.mistakes-list article > span { color: #fb9aaa; font: 8px DM Mono; }
+.mistakes-list b { font-size: 10px; }
+.mistakes-list p { color: var(--muted); font-size: 8px; line-height: 1.6; margin: 7px 0 0; }
+.mistakes-list strong { color: #bfc2cb; }
 .command-hints {
   display: flex;
   gap: 7px;
@@ -1066,6 +1085,11 @@
   .annotation-grid {
     grid-template-columns: 1fr;
   }
+  .decision-table > header { display: none; }
+  .decision-table > div { grid-template-columns: 1fr; }
+  .decision-table > div > p,
+  .decision-table > div > div { border-right: 0; border-bottom: 1px solid var(--line); }
+  .decision-table > div > div { border-bottom: 0; }
   .takeaway-grid,
   .lesson-glossary {
     grid-template-columns: 1fr;
